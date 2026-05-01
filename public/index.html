@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eShipper Plus CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple:#34368a; --purple-dk:#27296b; --purple-lt:#4a4ea8;
+  --teal:#62c0ae; --teal-lt:#7dd4c4; --teal-bg:#edf8f5;
+  --grey:#e6e7e8; --grey-mid:#bbbdbe; --grey-dk:#8a8c8f;
+  --white:#fff; --surface:#f5f6fc; --surface2:#eceef7;
+  --text:#1a1c3a; --text2:#5a5d7e; --text3:#9496b4;
+  --border:#dde0f0; --success:#2ba877; --success-bg:#eaf6f0;
+  --warn:#e0832a; --warn-bg:#fef4e8; --danger:#cc3d3d; --danger-bg:#fdeaea;
+  --shadow:0 2px 12px rgba(52,54,138,.08);
+  --r:8px; --sidebar:218px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Poppins',sans-serif;font-size:13px;background:var(--surface);color:var(--text)}
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+#sb{width:var(--sidebar);background:var(--purple);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+#sb-brand{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.10)}
+#sb-brand img{width:148px;display:block}
+#sb-tag{font-size:9px;color:rgba(255,255,255,.38);letter-spacing:.08em;text-transform:uppercase;font-weight:500;margin-top:5px}
+.ns{padding:12px 16px 3px;font-size:9px;font-weight:600;color:rgba(255,255,255,.32);letter-spacing:.10em;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 14px;margin:1px 7px;border-radius:6px;cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.62);font-weight:400;transition:background .12s,color .12s;user-select:none}
+.ni:hover{background:rgba(255,255,255,.08);color:#fff}
+.ni.on{background:rgba(255,255,255,.13);color:#fff;font-weight:500}
+.ni.on .nd{background:var(--teal)}
+.nd{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.22);flex-shrink:0}
+.nbadge{margin-left:auto;background:var(--teal);color:#fff;font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:20px}
+hr.ndiv{border:none;border-top:1px solid rgba(255,255,255,.08);margin:7px 15px}
+#sb-user{margin-top:auto;padding:13px 14px;border-top:1px solid rgba(255,255,255,.10);display:flex;align-items:center;gap:9px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.un{font-size:11.5px;font-weight:500;color:#fff}
+.ur{font-size:9.5px;color:rgba(255,255,255,.42)}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* TOPBAR */
+#tb{padding:12px 22px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 4px rgba(52,54,138,.06)}
+#tb-l{display:flex;align-items:center;gap:10px}
+#tb-title{font-size:15px;font-weight:600}
+#tb-bc{font-size:10.5px;color:var(--text3)}
+#tb-r{display:flex;gap:8px;align-items:center}
+.btn{font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:var(--white);cursor:pointer;color:var(--text);transition:all .14s;line-height:1}
+.btn:hover{background:var(--surface);border-color:var(--grey-mid)}
+.btn-p{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-p:hover{background:var(--purple-dk)}
+.btn-t{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-t:hover{background:#52a898}
+.btn-sm{padding:5px 11px;font-size:11px}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:20px 22px}
+.screen{display:none}.screen.on{display:block}
+
+/* METRICS */
+.mrow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.met{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.met::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--purple);border-radius:3px 0 0 3px}
+.met.t::before{background:var(--teal)}
+.met.w::before{background:var(--warn)}
+.met.s::before{background:var(--success)}
+.met.d::before{background:var(--danger)}
+.ml{font-size:9.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.mv{font-size:22px;font-weight:600;color:var(--text);line-height:1}
+.ms{font-size:10px;color:var(--text3);margin-top:4px}
+.ms .up{color:var(--success)}.ms .dn{color:var(--danger)}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.ch{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:13px;font-weight:600}.cs{font-size:10.5px;color:var(--text3)}
+.cb{padding:14px 16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.g31{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:18px}
+
+/* FUNNEL */
+.frow{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.fl{font-size:10.5px;color:var(--text2);min-width:82px}
+.fbw{flex:1;background:var(--surface2);border-radius:4px;height:20px;overflow:hidden}
+.fb{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:7px;font-size:10px;font-weight:500;color:#fff}
+.fc{font-size:10.5px;color:var(--text2);min-width:48px;text-align:right}
+
+/* BARS */
+.brow{display:flex;gap:6px;align-items:flex-end;height:80px;padding:0 2px}
+.bw{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.b{width:100%;background:var(--purple);border-radius:3px 3px 0 0;opacity:.78;cursor:pointer;transition:opacity .12s}
+.b:hover{opacity:1}
+.b.t{background:var(--teal)}
+.bl{font-size:8.5px;color:var(--text3);text-align:center}
+
+/* SOURCE BARS */
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sn{font-size:11px;color:var(--text2);min-width:90px}
+.sbw{flex:1;background:var(--surface2);border-radius:3px;height:7px}
+.sb{height:7px;border-radius:3px}
+.sp{font-size:10.5px;font-weight:500;color:var(--text2);min-width:28px;text-align:right}
+
+/* ACTIVITY */
+.alist .ai{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11.5px;align-items:flex-start}
+.alist .ai:last-child{border-bottom:none}
+.at{font-size:10px;color:var(--text3);min-width:62px;flex-shrink:0;padding-top:1px}
+.ax{color:var(--text2);line-height:1.4}
+.ax strong{color:var(--text);font-weight:500}
+
+/* FORECAST */
+.fcast-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:11px}
+.fcast-s{min-width:88px;color:var(--text2)}
+.fcast-bw{flex:1;background:var(--surface2);border-radius:3px;height:16px;overflow:hidden}
+.fcast-b{height:100%;border-radius:3px;background:var(--purple);opacity:.72;display:flex;align-items:center;padding-left:5px;color:#fff;font-size:9.5px;font-weight:500}
+.fcast-v{min-width:58px;text-align:right;font-weight:500}
+.fcast-p{min-width:30px;text-align:right;color:var(--text3);font-size:10.5px}
+
+/* PILLS */
+.pill{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%}
+.p-new{background:#eef0f8;color:var(--purple)}.p-new::before{background:var(--purple)}
+.p-qual{background:#fff4e6;color:#935a00}.p-qual::before{background:var(--warn)}
+.p-prop{background:#f0f0fa;color:#5050aa}.p-prop::before{background:#6868bb}
+.p-neg{background:#fff0f0;color:#993030}.p-neg::before{background:var(--danger)}
+.p-won{background:var(--success-bg);color:#1a7050}.p-won::before{background:var(--success)}
+.p-con{background:#e8f5fe;color:#1560a0}.p-con::before{background:#2588d0}
+.p-ob{background:var(--teal-bg);color:#1a6858}.p-ob::before{background:var(--teal)}
+.p-lost{background:var(--danger-bg);color:#992020}.p-lost::before{background:var(--danger)}
+
+/* KANBAN */
+.kanban{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px;align-items:start}
+.kc{border-radius:var(--r);background:var(--surface);border:1px solid var(--border);overflow:hidden}
+.kh{padding:8px 10px;font-size:10px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.04em;background:var(--white)}
+.kbadge{background:var(--surface2);color:var(--purple);border-radius:20px;padding:1px 6px;font-size:9.5px;font-weight:600}
+.kcard{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:9px 10px;margin:7px;cursor:pointer;transition:box-shadow .14s,border-color .14s}
+.kcard:hover{box-shadow:var(--shadow);border-color:var(--purple-lt)}
+.kcard-n{font-size:11.5px;font-weight:600;margin-bottom:2px}
+.kcard-m{font-size:10px;color:var(--text3);margin-bottom:4px}
+.kcard-v{font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px}
+.kcard-o{display:flex;align-items:center;gap:3px;font-size:9.5px;color:var(--text3)}
+.odot{width:5px;height:5px;border-radius:50%}
+.kcard.won{border-left:3px solid var(--success)}
+.kcard.lost{border-left:3px solid var(--danger);opacity:.55}
+
+/* TABLE */
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt th{text-align:left;padding:8px 12px;font-size:10px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.05em;background:var(--surface)}
+.dt td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.dt tr:hover td{background:var(--surface);cursor:pointer}
+.dt tr:last-child td{border-bottom:none}
+
+/* FORMS */
+.fg{display:flex;flex-direction:column;gap:4px}
+.fl2{font-size:10.5px;font-weight:500;color:var(--text2)}
+.fi,.fsel{font-family:'Poppins',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--white);color:var(--text)}
+.fi:focus,.fsel:focus{outline:none;border-color:var(--purple)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+textarea.fi{resize:vertical;min-height:68px}
+
+/* RATE CALC */
+.calc-res{background:var(--purple);border-radius:var(--r);padding:16px 18px;color:#fff;margin-top:14px}
+.crl{font-size:10.5px;opacity:.65;margin-bottom:3px}
+.crv{font-size:28px;font-weight:600;line-height:1;margin-bottom:12px}
+.crline{display:flex;justify-content:space-between;font-size:11px;opacity:.72;margin-bottom:4px}
+.crdiv{border:none;border-top:1px solid rgba(255,255,255,.18);margin:7px 0}
+.cract{display:flex;gap:9px;margin-top:12px}
+.btn-ghost{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff}
+.btn-ghost:hover{background:rgba(255,255,255,.25)}
+
+/* NOTIF */
+.nlist{display:flex;flex-direction:column;gap:9px}
+.nitem{display:flex;gap:11px;padding:12px 14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);align-items:flex-start;transition:box-shadow .13s}
+.nitem:hover{box-shadow:var(--shadow)}
+.nitem.unr{border-left:3px solid var(--purple)}
+.nic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.nt{font-size:12px;color:var(--text);line-height:1.4}
+.ntm{font-size:10px;color:var(--text3);margin-top:3px}
+
+/* DEAL DETAIL */
+.ddg{display:grid;grid-template-columns:1fr 270px;gap:14px}
+.drow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.drow:last-child{border-bottom:none}
+.dk{color:var(--text3)}.dv{color:var(--text);font-weight:500}
+.chk-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;cursor:pointer}
+.chk-item:last-child{border-bottom:none}
+.chkb{width:15px;height:15px;border:1.5px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
+.chkb.ck{background:var(--teal);border-color:var(--teal);color:#fff}
+
+/* ONBOARDING */
+.ob-item{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:6px;margin-bottom:7px;border:1px solid var(--border);background:var(--white);cursor:pointer;transition:background .13s}
+.ob-item:hover{background:var(--surface)}
+.ob-item.act{border-color:var(--teal);background:var(--teal-bg)}
+.ob-num{width:21px;height:21px;border-radius:50%;background:var(--surface2);color:var(--text3);font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ob-item.act .ob-num{background:var(--teal);color:#fff}
+.ob-n{font-size:12px;font-weight:500;flex:1}
+
+/* PARTNER */
+.pf-wrap{max-width:600px}
+.pf-hdr{background:var(--purple);padding:24px 28px;color:#fff;border-radius:var(--r) var(--r) 0 0}
+.pf-hdr h2{font-size:16px;font-weight:600;margin-top:8px}
+.pf-hdr p{font-size:11.5px;opacity:.7;margin-top:5px}
+.pf-body{padding:22px 28px;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r)}
+.pf-sec{font-size:12px;font-weight:600;color:var(--text);margin-bottom:11px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--grey-mid);border-radius:4px}
+
+/* ─── RESPONSIVE / MOBILE ─── */
+@media (max-width:900px){
+  #app{flex-direction:column}
+  #sb{width:100%;flex-direction:row;flex-wrap:wrap;padding-bottom:8px;overflow-x:auto;min-height:unset}
+  #sb-brand{padding:10px 14px 8px;border-right:none;border-bottom:1px solid rgba(255,255,255,.10);min-width:100%}
+  #sb-brand img{width:120px}
+  .ns{display:none}
+  .ni{padding:6px 10px;margin:2px 4px;font-size:11px;white-space:nowrap}
+  #sb-user{margin-top:0;border-top:none;border-left:1px solid rgba(255,255,255,.10);padding:6px 10px}
+  #main{min-height:0}
+  #tb{padding:10px 14px}
+  #tb-title{font-size:13px}
+  #content{padding:12px 14px}
+  .mrow{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}
+  .g31{grid-template-columns:1fr}
+  .kanban{grid-template-columns:repeat(3,minmax(150px,1fr));overflow-x:auto}
+  .calc-grid{grid-template-columns:1fr}
+  .deal-detail-grid, .ddg{grid-template-columns:1fr}
+  .fg2{grid-template-columns:1fr}
+  .pf-wrap{max-width:100%}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .partner-form-wrap{max-width:100%}
+}
+@media (max-width:600px){
+  .mrow{grid-template-columns:1fr}
+  .kanban{grid-template-columns:repeat(2,minmax(150px,1fr))}
+  .btn{padding:6px 10px;font-size:11px}
+  .mv{font-size:18px}
+  #tb-r .btn:not(.btn-p){display:none}
+}
+
+.dup-badge{display:inline-flex;align-items:center;gap:5px;background:#fdeaea;color:#cc3d3d;
+  border:1px solid #cc3d3d;border-radius:5px;padding:3px 10px;font-size:10.5px;font-weight:600;margin-left:8px}
+.rep-change-btn{font-size:10.5px;padding:3px 9px;background:#eef0f8;color:var(--purple);
+  border:1px solid var(--purple);border-radius:5px;cursor:pointer;font-family:inherit;font-weight:500}
+.rep-change-btn:hover{background:var(--purple);color:#fff}
+
+.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+        .sortable:hover{background:#f0f2fb}
+        .sort-icon{opacity:.4;font-size:10px;margin-left:3px}
+        .sort-asc .sort-icon::after{content:"↑";opacity:1}
+        .sort-desc .sort-icon::after{content:"↓";opacity:1}
+        .sort-asc .sort-icon, .sort-desc .sort-icon{opacity:1;color:var(--purple)}
+        tr.hidden-row{display:none}
+</style>
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<!-- Auth gate overlay — displayed until user signs in -->
+<div id="auth-gate" style="display:none;position:fixed;inset:0;background:#34368a;z-index:10000;color:#fff;align-items:center;justify-content:center;flex-direction:column;gap:20px;font-family:Poppins,sans-serif">
+  <div style="font-size:22px;font-weight:600">eShipper Plus CRM</div>
+  <div style="font-size:13px;opacity:.75">Sign in with your eShipper Google account</div>
+  <button id="auth-signin-btn" style="background:#fff;color:#34368a;border:none;padding:10px 22px;border-radius:6px;font-family:Poppins;font-size:14px;font-weight:500;cursor:pointer">Sign in with Google</button>
+  <div id="auth-error" style="font-size:12px;color:#ff9e9e;max-width:360px;text-align:center;min-height:16px"></div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" style="position:fixed;top:18px;right:18px;z-index:9000;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
+
+<div id="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<div id="sb">
+  <div id="sb-brand">
+    <img id="logo-h" src="" alt="eShipper Plus" style="max-width:150px;height:auto;display:block;mix-blend-mode:screen;margin-bottom:2px">
+    <div id="sb-tag">Warehouse CRM</div>
+  </div>
+
+  <div class="ns">Main</div>
+  <div class="ni on" onclick="show('dashboard',this)"><span class="nd"></span>Dashboard</div>
+  <div class="ni" onclick="show('pipeline',this)"><span class="nd"></span>Pipeline<span class="nbadge">24</span></div>
+  <div class="ni" onclick="show('leads',this)"><span class="nd"></span>Leads<span class="nbadge">7</span></div>
+
+  <div class="ns">Tools</div>
+  <div class="ni" onclick="show('calculator',this)"><span class="nd"></span>Rate Calculator</div>
+  <div class="ni" onclick="show('notifications',this)"><span class="nd"></span>Notifications<span class="nbadge">3</span></div>
+
+  <div class="ns">Views</div>
+  <div class="ni" onclick="show('deal',this)"><span class="nd"></span>Deal Detail</div>
+  <div class="ni" onclick="show('onboarding',this)"><span class="nd"></span>Onboarding</div>
+  <div class="ns">Intake</div>
+  <div class="ni" onclick="show('partner',this)"><span class="nd"></span>Partner Portal</div>
+  <div class="ni" onclick="show('manual-lead',this)"><span class="nd"></span>Manual Lead Entry</div>
+
+  <hr class="ndiv">
+  <div class="ni" onclick="show('notif-settings',this)"><span class="nd"></span>Notification Rules</div>
+  <div class="ni" onclick="show('users',this)"><span class="nd"></span>User Management</div>
+  <div class="ni" onclick="show('settings',this)"><span class="nd"></span>Settings</div>
+
+  <div id="sb-user">
+    <div class="av">AM</div>
+    <div><div class="un">Ahmed D.</div><div class="ur">Admin</div></div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+  <div id="tb">
+    <div id="tb-l">
+      <div id="tb-title">Dashboard</div>
+      <div id="tb-bc">eShipper Plus CRM</div>
+    </div>
+    <div id="tb-r">
+      <button class="btn btn-sm" onclick="show('leads',document.querySelector('.ni:nth-child(4)'))">+ New Lead</button>
+      <button class="btn btn-p btn-sm" onclick="show('calculator',document.querySelector('.ni:nth-child(7)'))">Rate Calculator</button>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="screen on" id="s-dashboard">
+      <div style="background:var(--purple);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;font-weight:600;color:#fff">MVP Scope — Phase 1</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.6)">Meeting flow · AI scoring · Profitability panel → v2</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="background:rgba(255,255,255,.15);color:#fff;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:600">✅ 26 Rules Active</span>
+          <span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);border-radius:4px;padding:2px 8px;font-size:10px">🅿️ 12 Parked v2</span>
+        </div>
+      </div>
+      <div class="mrow">
+        <div class="met"><div class="ml">Active Deals</div><div class="mv">24</div><div class="ms"><span class="up">↑3</span> vs last month</div></div>
+        <div class="met t"><div class="ml">Pipeline Value</div><div class="mv">$1.84M</div><div class="ms"><span class="up">↑12%</span> vs last month</div></div>
+        <div class="met s"><div class="ml">Weighted Forecast</div><div class="mv">$612K</div><div class="ms">Based on stage probs</div></div>
+        <div class="met w"><div class="ml">Win Rate</div><div class="mv">34%</div><div class="ms"><span class="dn">↓2%</span> vs last quarter</div></div>
+        <div class="met d"><div class="ml">Avg Deal Size</div><div class="mv">$76.8K</div><div class="ms"><span class="up">↑8%</span> vs last month</div></div>
+      </div>
+
+      <div class="g31">
+        <div class="card">
+          <div class="ch"><span class="ct">Pipeline Funnel</span><span class="cs">All time periods</span></div>
+          <div class="cb">
+            <div class="frow"><div class="fl">New</div><div class="fbw"><div class="fb" style="width:100%;background:var(--purple)">8 deals</div></div><div class="fc">$380K</div></div>
+            <div class="frow"><div class="fl">Qualified</div><div class="fbw"><div class="fb" style="width:82%;background:#5258b0">6 deals</div></div><div class="fc">$312K</div></div>
+            <div class="frow"><div class="fl">Proposal</div><div class="fbw"><div class="fb" style="width:64%;background:#6868bb">5 deals</div></div><div class="fc">$248K</div></div>
+            <div class="frow"><div class="fl">Negotiation</div><div class="fbw"><div class="fb" style="width:46%;background:var(--warn)">3 deals</div></div><div class="fc">$195K</div></div>
+            <div class="frow"><div class="fl">Closed Won</div><div class="fbw"><div class="fb" style="width:32%;background:var(--success)">2 deals</div></div><div class="fc">$144K</div></div>
+            <div class="frow"><div class="fl">Contract</div><div class="fbw"><div class="fb" style="width:20%;background:#2588d0">1 deal</div></div><div class="fc">$88K</div></div>
+            <div class="frow"><div class="fl">Onboarding</div><div class="fbw"><div class="fb" style="width:14%;background:var(--teal)">1 deal</div></div><div class="fc">$65K</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><span class="ct">Weighted Forecast</span></div>
+          <div class="cb">
+            <div class="fcast-row"><div class="fcast-s">New (10%)</div><div class="fcast-bw"><div class="fcast-b" style="width:100%">$38K</div></div><div class="fcast-v">$38K</div></div>
+            <div class="fcast-row"><div class="fcast-s">Qualified (25%)</div><div class="fcast-bw"><div class="fcast-b" style="width:82%">$78K</div></div><div class="fcast-v">$78K</div></div>
+            <div class="fcast-row"><div class="fcast-s">Proposal (40%)</div><div class="fcast-bw"><div class="fcast-b" style="width:65%">$99K</div></div><div class="fcast-v">$99K</div></div>
+            <div class="fcast-row"><div class="fcast-s">Negotiation (65%)</div><div class="fcast-bw"><div class="fcast-b" style="width:80%">$127K</div></div><div class="fcast-v">$127K</div></div>
+            <div class="fcast-row"><div class="fcast-s">Won (90%)</div><div class="fcast-bw"><div class="fcast-b" style="width:55%;background:var(--success)">$130K</div></div><div class="fcast-v">$130K</div></div>
+            <div class="fcast-row"><div class="fcast-s">Contract (95%)</div><div class="fcast-bw"><div class="fcast-b" style="width:40%;background:#2588d0">$84K</div></div><div class="fcast-v">$84K</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="ct">Deals by Owner</span></div>
+          <div class="cb">
+            <table class="dt">
+              <tr><th>Rep</th><th>Deals</th><th>Pipeline</th><th>Win Rate</th></tr>
+              <tr><td><strong>Ahmed D.</strong></td><td>8</td><td>$620K</td><td><span class="pill p-won">42%</span></td></tr>
+              <tr><td>Sara K.</td><td>7</td><td>$510K</td><td><span class="pill p-qual">31%</span></td></tr>
+              <tr><td>James T.</td><td>5</td><td>$380K</td><td><span class="pill p-won">38%</span></td></tr>
+              <tr><td>Priya L.</td><td>4</td><td>$330K</td><td><span class="pill p-neg">22%</span></td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><span class="ct">Lead Sources</span></div>
+          <div class="cb">
+            <div class="srow"><div class="sn">Partner Portal</div><div class="sbw"><div class="sb" style="width:78%;background:var(--purple)"></div></div><div class="sp">78%</div></div>
+            <div class="srow"><div class="sn">WordPress</div><div class="sbw"><div class="sb" style="width:52%;background:var(--purple-lt)"></div></div><div class="sp">52%</div></div>
+            <div class="srow"><div class="sn">Referral</div><div class="sbw"><div class="sb" style="width:38%;background:var(--teal)"></div></div><div class="sp">38%</div></div>
+            <div class="srow"><div class="sn">Direct</div><div class="sbw"><div class="sb" style="width:22%;background:var(--teal-lt)"></div></div><div class="sp">22%</div></div>
+            <div class="srow"><div class="sn">Cold Outreach</div><div class="sbw"><div class="sb" style="width:12%;background:var(--grey-dk)"></div></div><div class="sp">12%</div></div>
+            <div style="margin-top:12px">
+              <div class="frow"><div class="fl">Avg Stage Vel.</div><div class="fbw" style="height:14px"><div class="fb" style="width:60%;background:var(--teal);height:14px">8.4 days</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><span class="ct">Recent Activity</span><span class="cs">Last 24 hours</span></div>
+        <div class="cb">
+          <div class="alist">
+            <div class="ai"><div class="at">2h ago</div><div class="ax"><strong>GreenBox Logistics</strong> moved to <span class="pill p-neg">Negotiation</span> by Ahmed D.</div></div>
+            <div class="ai"><div class="at">4h ago</div><div class="ax">New lead <strong>Arctic Cold Storage</strong> submitted via Partner Portal — tagged <span class="pill p-new">New</span></div></div>
+            <div class="ai"><div class="at">6h ago</div><div class="ax"><strong>ProShip Inc.</strong> contract signed via eSignature — moved to <span class="pill p-ob">Onboarding</span></div></div>
+            <div class="ai"><div class="at">9h ago</div><div class="ax">Rate quote sent to <strong>Summit Retail</strong> — $18,400/mo estimate</div></div>
+            <div class="ai"><div class="at">14h ago</div><div class="ax"><strong>Cascade Fulfillment</strong> marked <span class="pill p-lost">Closed Lost</span> — re-engage Sept 2025</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PIPELINE ═══ -->
+    <div class="screen" id="s-pipeline">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text2)">24 active deals · $1.84M pipeline</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm">Filter</button>
+          <button class="btn btn-p btn-sm">+ New Deal</button>
+        </div>
+      </div>
+      <div class="kanban">
+        <!-- NEW -->
+        <div class="kc">
+          <div class="kh">New<span class="kbadge">8</span></div>
+          <div class="kcard" onclick="show('deal',document.querySelector('.ni:nth-child(11)'))">
+            <div class="kcard-n">Arctic Cold Storage</div>
+            <div class="kcard-m">Warehousing · Partner</div>
+            <div class="kcard-v">$42,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#e0832a"></div>Sara K.</div>
+          </div>
+          <div class="kcard" onclick="show('deal',document.querySelector('.ni:nth-child(11)'))">
+            <div class="kcard-n">Maple Peak Foods</div>
+            <div class="kcard-m">Fulfillment · WordPress</div>
+            <div class="kcard-v">$28,500/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#34368a"></div>Ahmed D.</div>
+          </div>
+        </div>
+        <!-- QUALIFIED -->
+        <div class="kc">
+          <div class="kh">Qualified<span class="kbadge">6</span></div>
+          <div class="kcard" onclick="show('deal',document.querySelector('.ni:nth-child(11)'))">
+            <div class="kcard-n">Summit Retail Co.</div>
+            <div class="kcard-m">Small Parcel · Direct</div>
+            <div class="kcard-v">$18,400/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#2ba877"></div>James T.</div>
+          </div>
+          <div class="kcard">
+            <div class="kcard-n">Northern Goods Ltd</div>
+            <div class="kcard-m">Freight · Referral</div>
+            <div class="kcard-v">$55,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#cc3d3d"></div>Priya L.</div>
+          </div>
+        </div>
+        <!-- PROPOSAL -->
+        <div class="kc">
+          <div class="kh">Proposal<span class="kbadge">5</span></div>
+          <div class="kcard">
+            <div class="kcard-n">Blue River Apparel</div>
+            <div class="kcard-m">Fulfillment · Partner</div>
+            <div class="kcard-v">$31,200/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#34368a"></div>Ahmed D.</div>
+          </div>
+          <div class="kcard">
+            <div class="kcard-n">Eastern Parts Inc.</div>
+            <div class="kcard-m">Warehousing · Direct</div>
+            <div class="kcard-v">$62,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#e0832a"></div>Sara K.</div>
+          </div>
+        </div>
+        <!-- NEGOTIATION -->
+        <div class="kc">
+          <div class="kh">Negotiation<span class="kbadge">3</span></div>
+          <div class="kcard">
+            <div class="kcard-n">GreenBox Logistics</div>
+            <div class="kcard-m">Freight · Referral</div>
+            <div class="kcard-v">$88,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#34368a"></div>Ahmed D.</div>
+          </div>
+        </div>
+        <!-- CLOSED WON -->
+        <div class="kc">
+          <div class="kh">Closed Won<span class="kbadge">2</span></div>
+          <div class="kcard won">
+            <div class="kcard-n">TerraFlex Supply</div>
+            <div class="kcard-m">Warehousing · Partner</div>
+            <div class="kcard-v">$44,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#2ba877"></div>James T.</div>
+          </div>
+        </div>
+        <!-- CONTRACT -->
+        <div class="kc">
+          <div class="kh">Contract<span class="kbadge">1</span></div>
+          <div class="kcard">
+            <div class="kcard-n">Clearview E-Com</div>
+            <div class="kcard-m">Fulfillment · WordPress</div>
+            <div class="kcard-v">$88,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#34368a"></div>Ahmed D.</div>
+          </div>
+        </div>
+        <!-- ONBOARDING -->
+        <div class="kc">
+          <div class="kh">Onboarding<span class="kbadge">1</span></div>
+          <div class="kcard won" onclick="show('onboarding',document.querySelector('.ni:nth-child(12)'))">
+            <div class="kcard-n">ProShip Inc.</div>
+            <div class="kcard-m">Small Parcel · Referral</div>
+            <div class="kcard-v">$65,000/mo</div>
+            <div class="kcard-o"><div class="odot" style="background:#62c0ae"></div>Sara K.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LEADS ═══ -->
+    <div class="screen" id="s-leads">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="fi" id="lead-search" placeholder="🔍  Search by company, contact..." style="width:220px;padding:5px 10px;font-size:11.5px" oninput="filterLeads()">
+          <select class="fsel" id="lead-filter-stage" style="font-size:11.5px;padding:4px 8px;width:130px" onchange="filterLeads()">
+            <option value="">All Stages</option>
+            <option>New</option><option>Qualified</option><option>Proposal Sent</option>
+            <option>Negotiation</option><option>Closed Won</option><option>Onboarding</option><option>Closed Lost</option>
+          </select>
+          <select class="fsel" id="lead-filter-source" style="font-size:11.5px;padding:4px 8px;width:140px" onchange="filterLeads()">
+            <option value="">All Sources</option>
+            <option>WordPress</option><option>Partner Portal</option><option>Manual Entry</option><option>Referral</option><option>Direct</option>
+          </select>
+          <select class="fsel" id="lead-filter-owner" style="font-size:11.5px;padding:4px 8px;width:120px" onchange="filterLeads()">
+            <option value="">All Owners</option>
+            <option>Ahmed D.</option><option>Aamer A.</option><option>Sara K.</option><option>James T.</option><option>Priya L.</option>
+          </select>
+          <button class="btn btn-sm" onclick="clearLeadFilters()" style="font-size:10.5px">✕ Clear</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="lead-count" style="font-size:11px;color:var(--text3)">7 leads</span>
+          <button class="btn btn-sm">Export CSV</button>
+          <button class="btn btn-p btn-sm" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ Add Lead</button>
+        </div>
+      </div>
+      <div class="card" style="overflow-x:auto">
+        <table class="dt" id="leads-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="0" onclick="sortLeads(0)">Company <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="1" onclick="sortLeads(1)">Contact <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="2" onclick="sortLeads(2)">Industry <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="3" onclick="sortLeads(3)">Source <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="4" onclick="sortLeads(4)">Value Est. <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="5" onclick="sortLeads(5)">Stage <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="6" onclick="sortLeads(6)">Owner <span class="sort-icon">↕</span></th>
+              <th class="sortable" data-col="7" onclick="sortLeads(7)">Last Activity <span class="sort-icon">↕</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody">
+            <tr onclick="show('deal',document.querySelector('.ni[onclick*=deal]'))">
+              <td><strong>Arctic Cold Storage</strong></td><td>Mike Tremblay</td><td>Food & Bev</td><td>Partner Portal</td><td data-val="42000">$42K/mo</td><td><span class="pill p-new">New</span></td><td>Sara K.</td><td data-val="1">2h ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>Maple Peak Foods</strong></td><td>Jennifer Wu</td><td>Food & Bev</td><td>WordPress</td><td data-val="28000">$28K/mo</td><td><span class="pill p-new">New</span></td><td>Ahmed D.</td><td data-val="2">5h ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>Summit Retail Co.</strong></td><td>David Park</td><td>Retail</td><td>Direct</td><td data-val="18000">$18K/mo</td><td><span class="pill p-qual">Qualified</span></td><td>James T.</td><td data-val="24">Yesterday</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>Northern Goods Ltd</strong></td><td>Lisa Okonkwo</td><td>Distribution</td><td>Referral</td><td data-val="55000">$55K/mo</td><td><span class="pill p-qual">Qualified</span></td><td>Ahmed D.</td><td data-val="48">2d ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>Pacific Ecom Group</strong></td><td>Carlos Mendez</td><td>E-Commerce</td><td>WordPress</td><td data-val="9500">$9.5K/mo</td><td><span class="pill p-prop">Proposal Sent</span></td><td>Priya L.</td><td data-val="72">3d ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>Heartland Apparel</strong></td><td>Fatima Nasser</td><td>Apparel</td><td>Manual Entry</td><td data-val="14000">$14K/mo</td><td><span class="pill p-neg">Negotiation</span></td><td>Sara K.</td><td data-val="96">4d ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+            <tr>
+              <td><strong>True North Parts</strong></td><td>Jason Lee</td><td>Auto Parts</td><td>Partner Portal</td><td data-val="32000">$32K/mo</td><td><span class="pill p-new">New</span></td><td>James T.</td><td data-val="120">5h ago</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px">View</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      
+
+    </div>
+    <!-- ═══ RATE CALCULATOR ═══ -->
+    <div class="screen" id="s-calculator">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;padding:40px">
+        <div style="font-size:48px;margin-bottom:16px">🧮</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px">Rate Calculator</div>
+        <div style="font-size:13px;color:var(--text3);max-width:400px;line-height:1.7;margin-bottom:20px">
+          This section is reserved for the eShipper Plus rate calculator.<br>
+          It will be configured and launched post initial deployment.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 20px;font-size:11.5px;color:var(--text2);max-width:360px">
+          📋 <strong>Planned:</strong> Shipping, freight, warehousing & fulfillment rate estimation per service line — integrated with deal service breakdown.
+        </div>
+      </div>
+
+    </div>
+    <!-- ═══ NOTIFICATIONS ═══ -->
+    <div class="screen" id="s-notifications">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="fsel" id="notif-role-filter" style="font-size:11.5px;padding:4px 10px" onchange="filterNotifs()">
+            <option value="all">All roles</option>
+            <option value="admin">Admin (Aamer + Ahmed)</option>
+            <option value="rep">Sales Rep</option>
+            <option value="onboarding">Onboarding (Kim)</option>
+            <option value="finance">Finance (Divyanka)</option>
+          </select>
+          <select class="fsel" id="notif-type-filter" style="font-size:11.5px;padding:4px 10px" onchange="filterNotifs()">
+            <option value="all">All types</option>
+            <option value="unread">Unread only</option>
+            <option value="lead">New leads</option>
+            <option value="approval">Approvals</option>
+            <option value="escalation">Escalations</option>
+            <option value="deal">Deal updates</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="notif-unread-count" style="font-size:11px;color:var(--text3)">4 unread</span>
+          <button class="btn btn-sm" onclick="markAllRead()">Mark all as read</button>
+        </div>
+      </div>
+
+      <!-- Role key -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--text2);display:flex;gap:16px;flex-wrap:wrap">
+        <span><strong style="color:var(--purple)">Admin</strong> = Aamer + Ahmed</span>
+        <span><strong style="color:#e0832a">Rep</strong> = All sales reps</span>
+        <span><strong style="color:var(--teal-dk)">Onboarding</strong> = Kim W.</span>
+        <span><strong style="color:#5258b0">Finance</strong> = Divyanka K.</span>
+        <span style="color:var(--text3);margin-left:4px">Each notification shows who receives it. Logged-in user only sees their relevant notifications in production.</span>
+      </div>
+
+      <div class="card">
+        <div id="notif-list" style="display:flex;flex-direction:column;gap:0">
+
+          <!-- Unread notifications -->
+          <div class="notif-item unread" data-role="admin" data-type="lead" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafbff">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:600">🔔 New lead: Arctic Cold Storage</span>
+                <span style="font-size:9.5px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600">Admin</span>
+                <span style="font-size:9.5px;background:#fff9ee;color:#7a4a00;border-radius:3px;padding:1px 6px;font-weight:600">Rep</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Partner Portal · $42K/mo · Tier 4 · Assigned to Sara K.</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">2 hours ago</div>
+            </div>
+            <button class="btn btn-sm" style="padding:2px 10px;font-size:10px;flex-shrink:0" onclick="markOneRead(this)">Mark read</button>
+          </div>
+
+          <div class="notif-item unread" data-role="admin" data-type="approval" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafbff">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:600">🔐 Proposal approval needed: Heartland Apparel</span>
+                <span style="font-size:9.5px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600">Admin</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Sara K. requesting approval before sending proposal · $14K/mo deal</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">4 hours ago</div>
+            </div>
+            <div style="display:flex;gap:5px;flex-shrink:0">
+              <button class="btn btn-p btn-sm" style="padding:2px 10px;font-size:10px" onclick="markOneRead(this.parentElement)">Approve</button>
+              <button class="btn btn-sm" style="padding:2px 10px;font-size:10px" onclick="markOneRead(this.parentElement)">Mark read</button>
+            </div>
+          </div>
+
+          <div class="notif-item unread" data-role="rep" data-type="escalation" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fffdf8">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--warn);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:600">⏰ Inactivity: Northern Goods Ltd — 3 days</span>
+                <span style="font-size:9.5px;background:#fff9ee;color:#7a4a00;border-radius:3px;padding:1px 6px;font-weight:600">Rep</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">No activity logged for 3 days on $55K/mo deal · Assigned to Ahmed D.</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">6 hours ago</div>
+            </div>
+            <button class="btn btn-sm" style="padding:2px 10px;font-size:10px;flex-shrink:0" onclick="markOneRead(this)">Mark read</button>
+          </div>
+
+          <div class="notif-item unread" data-role="admin" data-type="escalation" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);background:#fafbff">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:600">⚠️ Escalation: Pacific Ecom Group — 7 days inactive</span>
+                <span style="font-size:9.5px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600">Admin</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Proposal sent 7 days ago with no response logged · $9.5K/mo · Priya L.</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">1 hour ago</div>
+            </div>
+            <button class="btn btn-sm" style="padding:2px 10px;font-size:10px;flex-shrink:0" onclick="markOneRead(this)">Mark read</button>
+          </div>
+
+          <!-- Read notifications -->
+          <div class="notif-item read" data-role="rep" data-type="deal" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);opacity:.6">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:500">📬 Proposal PDF ready: Summit Retail Co.</span>
+                <span style="font-size:9.5px;background:#f0f0f0;color:#666;border-radius:3px;padding:1px 6px;font-weight:600">Rep</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Proposal approved by Ahmed D. · ready to review and send manually</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">Yesterday · Read</div>
+            </div>
+          </div>
+
+          <div class="notif-item read" data-role="onboarding" data-type="deal" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);opacity:.6">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:500">📋 New onboarding: Sunrise Foods Inc.</span>
+                <span style="font-size:9.5px;background:var(--teal-bg);color:var(--teal-dk);border-radius:3px;padding:1px 6px;font-weight:600">Onboarding</span>
+                <span style="font-size:9.5px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600">Admin</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Contract signed · $22K/mo · T+1 SLA active · Handoff email sent to Kim</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">2 days ago · Read</div>
+            </div>
+          </div>
+
+          <div class="notif-item read" data-role="finance" data-type="deal" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;opacity:.6">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;margin-top:5px"></div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+                <span style="font-size:12px;font-weight:500">📈 Closed Won: True North Parts — $32K/mo</span>
+                <span style="font-size:9.5px;background:#e8fdf4;color:#1a5040;border-radius:3px;padding:1px 6px;font-weight:600">Finance</span>
+                <span style="font-size:9.5px;background:var(--purple-lt);color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600">Admin</span>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">ARR $384K confirmed · Contract sent for signature</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">3 days ago · Read</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+
+    </div>
+    <!-- ═══ DEAL DETAIL ═══ -->
+    <div class="screen" id="s-deal">
+      <!-- Deal Header + Rep Bar -->
+      <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+          <span style="font-size:16px;font-weight:600">Arctic Cold Storage</span>
+          <span class="pill p-new">New</span>
+          <span class="dup-badge" style="display:none">⚠️ Possible Duplicate</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm">Edit</button>
+          <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);border-color:var(--danger)" onclick="document.getElementById('lost-modal').style.display='flex'">Mark Lost</button>
+          <button class="btn btn-p btn-sm" onclick="document.getElementById('advance-modal').style.display='flex'">Move Stage ▸</button>
+        </div>
+      </div>
+
+      <!-- Rep Reassignment Bar (Admin only) -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text2)">
+          <div class="av" style="width:24px;height:24px;font-size:9.5px;background:#e0832a">SK</div>
+          Assigned to <strong style="color:var(--text);margin-left:3px">Sara K.</strong>
+          <span style="color:var(--text3)">since Apr 11, 2026</span>
+        </div>
+        <button class="rep-change-btn" onclick="document.getElementById('rep-modal').style.display='flex'">🔄 Change Rep</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="ddg">
+
+        <!-- LEFT COLUMN -->
+        <div>
+          <!-- Deal Info -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch"><span class="ct">Deal Information</span><button class="btn btn-sm" style="padding:2px 9px;font-size:10px">Edit</button></div>
+            <div class="cb">
+              <div class="drow"><span class="dk">Company</span><span class="dv">Arctic Cold Storage Inc.</span></div>
+              <div class="drow"><span class="dk">Contact</span><span class="dv">Mike Tremblay — VP Ops</span></div>
+              <div class="drow"><span class="dk">Email</span><span class="dv">m.tremblay@arcticcold.ca</span></div>
+              <div class="drow"><span class="dk">Phone</span><span class="dv">+1 (416) 555-0182</span></div>
+              <div class="drow">
+                <span class="dk">Industry</span>
+                <span class="dv">
+                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto">
+                    <option selected>Food & Beverage</option>
+                    <option>Retail</option><option>E-Commerce</option><option>Auto Parts</option>
+                    <option>Distribution</option><option>Apparel</option><option>Pharmaceutical</option><option>Other</option>
+                  </select>
+                </span>
+              </div>
+              <div class="drow">
+                <span class="dk">Lead Source</span>
+                <span class="dv">
+                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto">
+                    <option selected>Partner Portal</option>
+                    <option>WordPress</option><option>Manual Entry</option><option>Trade Show</option>
+                    <option>Cold Outreach</option><option>Referral</option><option>LinkedIn</option>
+                  </select>
+                </span>
+              </div>
+              <div class="drow">
+                <span class="dk">Owner</span>
+                <span class="dv">
+                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto" id="deal-owner-select">
+                    <option>Sara K.</option><option>Ahmed D.</option><option>Aamer A.</option>
+                    <option>James T.</option><option>Priya L.</option>
+                  </select>
+                </span>
+              </div>
+              <div class="drow"><span class="dk">Deal Tier</span><span class="dv"><span class="pill p-ob">Tier 4 — $25K+/mo</span></span></div>
+              <div class="drow"><span class="dk">Created</span><span class="dv">April 11, 2026</span></div>
+              <div class="drow"><span class="dk">Last Activity</span><span class="dv">2 hours ago</span></div>
+            </div>
+          </div>
+
+          <!-- Activity / Notes -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch"><span class="ct">Activity Log</span><span class="cs">Most recent first</span></div>
+            <div class="cb">
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+                <div style="display:flex;gap:10px;font-size:11px">
+                  <div class="av" style="width:22px;height:22px;font-size:9px;background:#e0832a;flex-shrink:0">SK</div>
+                  <div><div style="font-weight:500">Sara K. logged a call</div><div style="color:var(--text3);font-size:10px">Discovery call completed · Budget $40–45K/mo confirmed</div><div style="font-size:10px;color:var(--text3)">2h ago</div></div>
+                </div>
+                <div style="display:flex;gap:10px;font-size:11px">
+                  <div class="av" style="width:22px;height:22px;font-size:9px;background:var(--purple);flex-shrink:0">⚙</div>
+                  <div><div style="font-weight:500">Deal tier set to Tier 4</div><div style="color:var(--text3);font-size:10px">Auto-classified from $42K/mo service estimate</div><div style="font-size:10px;color:var(--text3)">Apr 11</div></div>
+                </div>
+                <div style="display:flex;gap:10px;font-size:11px">
+                  <div class="av" style="width:22px;height:22px;font-size:9px;background:#e0832a;flex-shrink:0">SK</div>
+                  <div><div style="font-weight:500">Lead received via Partner Portal</div><div style="color:var(--text3);font-size:10px">Jordan Smith (Acme Logistics Brokers)</div><div style="font-size:10px;color:var(--text3)">Apr 11</div></div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <input class="fi" placeholder="Add a note..." style="flex:1;font-size:11.5px">
+                <button class="btn btn-p btn-sm">Log</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div>
+          <!-- Service Breakdown -->
+          <div class="card" style="margin-bottom:14px">
+            <div class="ch"><span class="ct">Service Breakdown</span><span class="cs">Per-service monthly revenue</span></div>
+            <div class="cb">
+              <table class="dt" style="width:100%">
+                <tr><th>Service</th><th>Monthly Revenue</th><th></th></tr>
+                <tr><td>Freight</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
+                <tr><td>Small Parcel Shipping</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
+                <tr><td>Warehousing & Fulfillment</td><td><input class="fi" type="text" value="$42,000" style="width:100px;padding:4px 8px;font-size:11.5px"></td><td><span class="pill p-won" style="font-size:9.5px">Active</span></td></tr>
+                <tr><td>Cross-Docking</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
+                <tr><td>Value Added Services (VAS)</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
+              </table>
+              <div style="margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:12px;font-weight:600;color:var(--text)">Total Monthly Revenue</span>
+                <span style="font-size:16px;font-weight:700;color:var(--success)">$42,000 / mo</span>
+              </div>
+              <div style="margin-top:4px;text-align:right;font-size:11px;color:var(--text2)">ARR: <strong>$504,000</strong></div>
+            </div>
+          </div>
+
+          <!-- Profitability (Admin only) -->
+          <div class="card" style="margin-bottom:14px;border:1.5px solid var(--purple)">
+            <div class="ch" style="background:var(--purple)">
+              <span class="ct" style="color:#fff">🔒 Profitability Analysis</span>
+              <span class="cs" style="color:rgba(255,255,255,.5)">Admin only · costs set in Settings → Cost Inputs</span>
+            </div>
+            <div class="cb">
+              <div style="font-size:11px;color:var(--text2);background:var(--surface);border-radius:6px;padding:8px 12px;margin-bottom:10px">
+                <strong>How costs are calculated:</strong> Each service has a configurable cost rate set in <em>Settings → Cost Inputs</em> (e.g. warehousing cost as % of revenue, or fixed $ per pallet). The margin is: <strong>Revenue − Cost = Gross Profit</strong>. Contribution margin removes variable operational costs. Net profit also deducts your allocated fixed overhead (set in Settings).
+              </div>
+              <table class="dt" style="width:100%;margin-bottom:10px">
+                <tr><th>Service</th><th>Revenue/mo</th><th>Cost/mo</th><th>Gross Margin</th><th>GM%</th></tr>
+                <tr>
+                  <td>Warehousing & Fulfillment</td><td>$42,000</td><td>$25,200</td>
+                  <td style="color:var(--success);font-weight:600">$16,800</td>
+                  <td><span style="background:var(--success-bg);color:var(--success);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">40%</span></td>
+                </tr>
+              </table>
+              <div style="background:var(--surface);border-radius:6px;padding:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="text-align:center">
+                  <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Gross Margin</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--success)">40%</div>
+                  <div style="font-size:9.5px;color:var(--text3)">$16,800 / mo</div>
+                </div>
+                <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border)">
+                  <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Contribution Margin</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--teal)">33%</div>
+                  <div style="font-size:9.5px;color:var(--text3)">$13,860 / mo</div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Net Profit Est.</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--purple)">26%</div>
+                  <div style="font-size:9.5px;color:var(--text3)">$10,920 / mo</div>
+                </div>
+              </div>
+              <div style="margin-top:8px;font-size:10.5px;color:var(--text3);text-align:right">
+                <a href="#" onclick="show('settings',document.querySelector('.ni[onclick*=settings]'));return false" style="color:var(--purple)">Configure cost inputs in Settings →</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modals -->
+      <div id="advance-modal" style="display:none;position:fixed;inset:0;background:rgba(26,28,58,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:var(--white);border-radius:var(--r);width:420px;max-width:95vw;box-shadow:0 8px 40px rgba(52,54,138,.18);overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13.5px;font-weight:600">Move Stage</span>
+            <button class="btn btn-sm" onclick="document.getElementById('advance-modal').style.display='none'" style="padding:3px 8px">✕</button>
+          </div>
+          <div style="padding:16px 18px">
+            <div class="fg" style="margin-bottom:14px">
+              <label class="fl2">Move deal to</label>
+              <select class="fsel">
+                <option>Qualified</option><option>Proposal Sent</option><option>Negotiation</option>
+                <option>Closed Won</option><option>Contract & Signature</option><option>Onboarding</option>
+              </select>
+            </div>
+            <div class="fg" style="margin-bottom:16px"><label class="fl2">Notes (optional)</label><textarea class="fi" rows="2" placeholder="Reason for moving stage..."></textarea></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-sm" onclick="document.getElementById('advance-modal').style.display='none'">Cancel</button>
+              <button class="btn btn-p btn-sm" onclick="document.getElementById('advance-modal').style.display='none'">Confirm Move</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="lost-modal" style="display:none;position:fixed;inset:0;background:rgba(26,28,58,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:var(--white);border-radius:var(--r);width:420px;max-width:95vw;box-shadow:0 8px 40px rgba(52,54,138,.18);overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13.5px;font-weight:600;color:var(--danger)">Mark as Closed Lost</span>
+            <button class="btn btn-sm" onclick="document.getElementById('lost-modal').style.display='none'" style="padding:3px 8px">✕</button>
+          </div>
+          <div style="padding:16px 18px">
+            <div class="fg" style="margin-bottom:12px"><label class="fl2">Loss reason <span style="color:var(--danger)">*</span></label>
+              <select class="fsel"><option>— Select reason —</option><option>Price — too high</option><option>Went with competitor</option><option>No longer needed</option><option>Budget cut</option><option>No response</option><option>Other</option></select>
+            </div>
+            <div class="fg" style="margin-bottom:16px"><label class="fl2">Re-engagement date <span style="color:var(--danger)">*</span></label><input class="fi" type="date"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-sm" onclick="document.getElementById('lost-modal').style.display='none'">Cancel</button>
+              <button class="btn btn-sm" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="document.getElementById('lost-modal').style.display='none'">Confirm Lost</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="rep-modal" style="display:none;position:fixed;inset:0;background:rgba(26,28,58,.45);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:var(--white);border-radius:var(--r);width:400px;max-width:95vw;box-shadow:0 8px 40px rgba(52,54,138,.18);overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13.5px;font-weight:600">Reassign Deal</span>
+            <button class="btn btn-sm" onclick="document.getElementById('rep-modal').style.display='none'" style="padding:3px 8px">✕</button>
+          </div>
+          <div style="padding:16px 18px">
+            <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px">Admin only · change logged on deal record · new rep notified.</div>
+            <div class="fg" style="margin-bottom:12px"><label class="fl2">Assign to</label>
+              <select class="fsel"><option>Sara K. (current)</option><option>Ahmed D.</option><option>Aamer A.</option><option>James T.</option><option>Priya L.</option></select>
+            </div>
+            <div class="fg" style="margin-bottom:16px"><label class="fl2">Reason</label><input class="fi" placeholder="e.g. territory re-alignment..."></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-sm" onclick="document.getElementById('rep-modal').style.display='none'">Cancel</button>
+              <button class="btn btn-p btn-sm" onclick="document.getElementById('rep-modal').style.display='none'">Confirm Reassignment</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- ═══ ONBOARDING ═══ -->
+    <div class="screen" id="s-onboarding">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;padding:40px">
+        <div style="font-size:48px;margin-bottom:16px">📦</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px">Onboarding</div>
+        <div style="font-size:13px;color:var(--text3);max-width:400px;line-height:1.7;margin-bottom:20px">
+          This section will manage client onboarding after a deal is signed.<br>
+          It will be configured and launched post initial deployment.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 20px;font-size:11.5px;color:var(--text2);max-width:380px">
+          📋 <strong>Planned:</strong> Onboarding checklist per client, T+1 SLA tracking, Kim W. assignment, WMS export, handoff brief to Technical contact.
+        </div>
+      </div>
+
+    </div>
+    <!-- ═══ MANUAL LEAD ENTRY ═══ -->
+    <div class="screen" id="s-manual-lead">
+      <div style="margin-bottom:6px;font-size:11px;color:var(--text3)">Internal use only — logged as source: Manual Entry · no automated welcome email sent to client</div>
+      <div style="max-width:700px">
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="ch">
+            <span class="ct">Manual Lead Entry</span>
+            <span class="cs">Source tagged: Manual Entry</span>
+          </div>
+          <div class="cb">
+            <div style="background:var(--info-bg);border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:11.5px;color:var(--text2)">
+              ℹ️ Use this form to log leads sourced from trade shows, cold outreach, referrals, or any channel outside WordPress or the Partner Portal. The lead will be created directly in the pipeline at <strong>New</strong> stage.
+            </div>
+
+            <div class="fg2" style="margin-bottom:12px">
+              <div class="fg"><label class="fl2">Company Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="e.g. Northern Goods Ltd"></div>
+              <div class="fg"><label class="fl2">Industry</label>
+                <select class="fsel"><option>— Select —</option><option>Retail</option><option>Food & Beverage</option><option>E-Commerce</option><option>Auto Parts</option><option>Distribution</option><option>Apparel</option><option>Other</option></select>
+              </div>
+            </div>
+
+            <div class="fg2" style="margin-bottom:12px">
+              <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Full name"></div>
+              <div class="fg"><label class="fl2">Contact Title</label><input class="fi" placeholder="e.g. VP Operations"></div>
+            </div>
+
+            <div class="fg2" style="margin-bottom:12px">
+              <div class="fg"><label class="fl2">Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@company.com"></div>
+              <div class="fg"><label class="fl2">Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+            </div>
+
+            <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;margin-bottom:14px">
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Service Interests & Revenue</div>
+              <table class="dt" style="width:100%;margin-bottom:10px">
+                <tr><th>Service</th><th>Interested?</th><th>Est. Monthly Revenue</th></tr>
+                <tr>
+                  <td>Small Parcel Shipping</td>
+                  <td><input type="checkbox"></td>
+                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
+                </tr>
+                <tr>
+                  <td>LTL Freight</td>
+                  <td><input type="checkbox"></td>
+                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
+                </tr>
+                <tr>
+                  <td>FTL Freight</td>
+                  <td><input type="checkbox"></td>
+                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
+                </tr>
+                <tr>
+                  <td>Warehousing &amp; Fulfillment</td>
+                  <td><input type="checkbox" checked></td>
+                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$12,000"></td>
+                </tr>
+                <tr>
+                  <td>Fulfillment / Pick & Pack</td>
+                  <td><input type="checkbox"></td>
+                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
+                </tr>
+              </table>
+              <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px">
+                <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
+                <span style="font-size:16px;font-weight:700;color:var(--success)">$12,000</span>
+                <span style="font-size:11px;color:var(--text3)">→ Tier 3</span>
+              </div>
+            </div>
+
+            <div class="fg2" style="margin-bottom:12px">
+              <div class="fg"><label class="fl2">Lead Source <span style="color:var(--danger)">*</span></label>
+                <select class="fsel">
+                  <option>Trade Show / Event</option>
+                  <option>Cold Outreach — Email</option>
+                  <option>Cold Outreach — Phone</option>
+                  <option>Personal Referral</option>
+                  <option>LinkedIn</option>
+                  <option>Existing Client Referral</option>
+                  <option>Other — specify in notes</option>
+                </select>
+              </div>
+              <div class="fg"><label class="fl2">Assigned Rep <span style="color:var(--danger)">*</span></label>
+                <select class="fsel">
+                  <option>Ahmed D.</option>
+                  <option>Sara K.</option>
+                  <option>James T.</option>
+                  <option>Priya L.</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="fg" style="margin-bottom:16px">
+              <label class="fl2">Notes / Context</label>
+              <textarea class="fi" rows="3" placeholder="How was this lead sourced? Any context from initial conversation, pain points mentioned, timeline, etc."></textarea>
+            </div>
+
+            <div style="background:var(--surface);border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
+              <strong style="color:var(--text)">What happens on submit:</strong>
+              <div style="margin-top:5px;display:flex;flex-direction:column;gap:3px">
+                <div>✓ CRM deal record created — source tagged <span class="pill" style="background:var(--surface2);color:var(--text2);font-size:9.5px;padding:1px 6px">Manual Entry</span></div>
+                <div>✓ Deal tier auto-classified from revenue estimate</div>
+                <div>✓ Aamer + Ahmed notified (all tiers)</div>
+                <div>✗ No automated welcome email to client (manual channel — rep contacts directly)</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-sm">Clear Form</button>
+              <button class="btn btn-p">Create Lead Record</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ PARTNER PORTAL ═══ -->
+    <div class="screen" id="s-partner">
+      <div style="margin-bottom:4px;font-size:11px;color:var(--text3)">Preview: hosted at a public URL · no login required</div>
+      <div class="pf-wrap" style="max-width:640px">
+        <div class="pf-hdr">
+          <img id="logo-h2" src="" alt="eShipper Plus" style="width:180px;height:auto;display:block;background:#fff;border-radius:8px;padding:8px 14px;margin-bottom:12px;object-fit:contain">
+          <h2 style="font-size:18px;font-weight:700;color:var(--purple);margin-bottom:6px">Submit a Client Lead</h2>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:0">Partner with eShipper Plus to offer warehousing, fulfillment, and shipping solutions to your clients.</p>
+        </div>
+        <div class="pf-body">
+
+          <div class="pf-sec">Your Information (Partner)</div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Partner Company <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Your company name"></div>
+            <div class="fg"><label class="fl2">Your Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Full name"></div>
+          </div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Your Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="you@company.com"></div>
+            <div class="fg"><label class="fl2">Your Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label class="fl2">Sales Rep (from your company) <span style="color:var(--danger)">*</span></label>
+            <select class="fsel">
+              <option>— Select your rep —</option>
+              <option>Jordan Smith (Acme Logistics Brokers)</option>
+              <option>Leila Hassan (NorthStar Partners)</option>
+              <option>Mike Torres (Apex Freight Group)</option>
+            </select>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Not listed? Contact your eShipper Plus account manager.</div>
+          </div>
+
+          <div class="pf-sec" style="margin-top:4px">Client Information</div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Client Company <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Client company name"></div>
+            <div class="fg"><label class="fl2">Client Industry</label>
+              <select class="fsel"><option>— Select —</option><option>Retail</option><option>Food & Beverage</option><option>E-Commerce</option><option>Auto Parts</option><option>Distribution</option><option>Apparel</option><option>Pharmaceutical</option><option>Other</option></select>
+            </div>
+          </div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Primary contact full name"></div>
+            <div class="fg"><label class="fl2">Contact Title</label><input class="fi" placeholder="e.g. VP Operations"></div>
+          </div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Contact Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@client.com"></div>
+            <div class="fg"><label class="fl2">Contact Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+          </div>
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Province / Region</label>
+              <select class="fsel"><option>— Select —</option><option>Ontario</option><option>Quebec</option><option>British Columbia</option><option>Alberta</option><option>Other</option></select>
+            </div>
+            <div class="fg"><label class="fl2">Number of Employees</label>
+              <select class="fsel"><option>— Select —</option><option>1–10</option><option>11–50</option><option>51–200</option><option>200+</option></select>
+            </div>
+          </div>
+
+          <div class="pf-sec" style="margin-top:4px">Services & Volume</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Select all services the client requires and provide an estimated monthly volume/value.</div>
+          <table class="dt" style="width:100%;margin-bottom:14px">
+            <tr><th>Service</th><th>Interested?</th><th>Est. Monthly Revenue</th></tr>
+            <tr><td>Freight</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
+            <tr><td>Small Parcel Shipping</td><td><input type="checkbox" checked></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$12,000"></td></tr>
+            <tr><td>Warehousing & Fulfillment</td><td><input type="checkbox" checked></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$8,000"></td></tr>
+            <tr><td>Cross-Docking</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
+            <tr><td>Value Added Services (VAS)</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
+          </table>
+          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
+            <span style="font-size:16px;font-weight:700;color:var(--success)">$20,000</span>
+            <span style="font-size:11px;color:var(--text3)">→ Tier 2</span>
+          </div>
+
+          <div class="fg2" style="margin-bottom:12px">
+            <div class="fg"><label class="fl2">Monthly Shipment Volume</label>
+              <select class="fsel"><option>— Select —</option><option>&lt; 100 shipments</option><option>100–500</option><option>500–2,000</option><option>2,000–10,000</option><option>10,000+</option></select>
+            </div>
+            <div class="fg"><label class="fl2">Average Shipment Weight</label>
+              <select class="fsel"><option>— Select —</option><option>&lt; 5 lbs</option><option>5–20 lbs</option><option>20–70 lbs</option><option>70+ lbs (LTL/FTL)</option></select>
+            </div>
+          </div>
+
+          <div class="fg" style="margin-bottom:12px">
+            <label class="fl2">Meeting Request</label>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="partner-meeting"> <label for="partner-meeting" style="font-size:11.5px">Request an introductory call with eShipper Plus</label>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:16px">
+            <label class="fl2">Additional Notes</label>
+            <textarea class="fi" rows="3" placeholder="Any context about this client's current shipping situation, pain points, or urgency..."></textarea>
+          </div>
+
+          <div style="background:var(--surface);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--text2);margin-bottom:16px">
+            By submitting this form, you agree that eShipper Plus may contact the client directly. Partner attribution is applied for 180 days from submission.
+          </div>
+          <button class="btn btn-p" style="width:100%;justify-content:center">Submit Lead</button>
+        </div>
+      </div>
+
+    </div>
+    <!-- ═══ USER MANAGEMENT ═══ -->
+    <div class="screen" id="s-users">
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text2)">5 active users · Admin access only</div>
+        <button class="btn btn-p btn-sm" onclick="document.getElementById('user-modal').style.display='flex'">+ Invite User</button>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch"><span class="ct">Active Users</span><span class="cs">Google SSO · Firebase Auth</span></div>
+        <table class="dt">
+          <tr><th>Name</th><th>Email</th><th>Role</th><th>Last Login</th><th>Status</th><th>Actions</th></tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--purple)">AM</div><strong>Ahmed D.</strong></div></td>
+            <td>ahmed@eshipperplus.com</td><td><span class="pill p-won" style="background:#eef0f8;color:var(--purple)">Admin</span></td>
+            <td>Today, 9:02 AM</td><td><span class="pill p-won">Active</span></td>
+            <td><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#e0832a">SK</div>Sara K.</div></td>
+            <td>sara.k@eshipperplus.com</td><td><span class="pill p-qual">Sales Rep</span></td>
+            <td>Today, 8:45 AM</td><td><span class="pill p-won">Active</span></td>
+            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#2ba877">JT</div>James T.</div></td>
+            <td>james.t@eshipperplus.com</td><td><span class="pill p-qual">Sales Rep</span></td>
+            <td>Yesterday</td><td><span class="pill p-won">Active</span></td>
+            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--teal)">KW</div>Kim W.</div></td>
+            <td>kim.w@eshipperplus.com</td><td><span class="pill p-ob">Onboarding Mgr</span></td>
+            <td>Today, 10:15 AM</td><td><span class="pill p-won">Active</span></td>
+            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#5258b0">DK</div>Divyanka K.</div></td>
+            <td>divyanka.k@eshipperplus.com</td><td><span class="pill" style="background:#f0f0fa;color:#5050aa">Finance / Mgmt</span></td>
+            <td>2 days ago</td><td><span class="pill p-won">Active</span></td>
+            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--grey-dk)">AA</div><span style="color:var(--text3)">Aamer A.</span></div></td>
+            <td style="color:var(--text3)">aamer@eshipperplus.com</td><td><span class="pill p-won" style="background:#eef0f8;color:var(--purple)">Admin</span></td>
+            <td style="color:var(--text3)">Today, 7:30 AM</td><td><span class="pill p-won">Active</span></td>
+            <td><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button></td>
+          </tr>
+        </table>
+      </div>
+      <div class="card" style="max-width:800px">
+        <div class="ch"><span class="ct">Role Permissions</span><span class="cs">Read-only · edit in Settings</span></div>
+        <div class="cb">
+          <table class="dt">
+            <tr><th>Permission</th><th>Admin</th><th>Sales Rep</th><th>Onboarding Mgr</th><th>Finance / Mgmt</th></tr>
+            <tr><td>View all deals</td><td style="color:var(--success)">✓ Full</td><td style="color:var(--success)">✓ Full</td><td style="color:var(--warn)">Onboarding only</td><td style="color:var(--success)">✓ Read-only</td></tr>
+            <tr><td>Create / edit deals</td><td style="color:var(--success)">✓</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>Rate Calculator</td><td style="color:var(--success)">✓</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>Proposal approval</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>Contract generation</td><td style="color:var(--success)">✓</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>Onboarding checklist</td><td style="color:var(--success)">✓</td><td style="color:var(--warn)">Read-only</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>WMS export</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td></tr>
+            <tr><td>Dashboard / forecasts</td><td style="color:var(--success)">✓ Full</td><td style="color:var(--warn)">Own deals</td><td style="color:var(--danger)">✗</td><td style="color:var(--success)">✓ Read-only</td></tr>
+            <tr><td>User management</td><td style="color:var(--success)">✓</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td><td style="color:var(--danger)">✗</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- INVITE USER MODAL -->
+    <div id="user-modal" style="display:none;position:fixed;inset:0;background:rgba(26,28,58,.45);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:var(--white);border-radius:var(--r);width:460px;box-shadow:0 8px 40px rgba(52,54,138,.18);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:600">Invite New User</span>
+          <button class="btn btn-sm" onclick="document.getElementById('user-modal').style.display='none'" style="padding:3px 8px">✕</button>
+        </div>
+        <div style="padding:20px">
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Full Name</label><input class="fi" placeholder="e.g. Jordan Smith"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Email Address</label><input class="fi" type="email" placeholder="user@eshipperplus.com"></div>
+          <div class="fg" style="margin-bottom:16px">
+            <label class="fl2">Assign Role</label>
+            <select class="fsel"><option>— Select a role —</option><option>Admin</option><option>Sales Rep</option><option>Onboarding Manager</option><option>Finance / Management</option></select>
+          </div>
+          <div style="background:var(--surface);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:16px">ℹ️ An invitation will be sent via Google Auth (SSO). User sets password on first login.</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-sm" onclick="document.getElementById('user-modal').style.display='none'">Cancel</button>
+            <button class="btn btn-p btn-sm" onclick="document.getElementById('user-modal').style.display='none'">Send Invitation</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NOTIFICATION SETTINGS ═══ -->
+    <div class="screen" id="s-notif-settings">
+      <!-- DUPLICATE REVIEW QUEUE (Admin only) -->
+      <div class="card" style="margin-bottom:16px;border:1.5px solid var(--danger)">
+        <div class="ch" style="background:#fdeaea"><span class="ct" style="color:var(--danger)">⚠️ Duplicate Review Queue</span><span class="cs" style="color:#993030">Admin only — 1 pending</span></div>
+        <div class="cb">
+          <div style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+              <div style="padding:12px 14px;border-right:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">New Submission</div>
+                <div style="font-size:12px;font-weight:600">Arctic Cold Storage Inc.</div>
+                <div style="font-size:11px;color:var(--text3)">mike.t@arcticcold.ca · Partner Portal</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:4px">Warehousing + Fulfillment · $42,000/mo</div>
+                <div style="margin-top:6px"><span class="pill p-new">New</span></div>
+              </div>
+              <div style="padding:12px 14px">
+                <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Existing Deal</div>
+                <div style="font-size:12px;font-weight:600">Arctic Cold Storage</div>
+                <div style="font-size:11px;color:var(--text3)">mike.tremblay@arcticcold.ca · Manual Entry</div>
+                <div style="font-size:11px;color:var(--text2);margin-top:4px">Warehousing · $28,000/mo</div>
+                <div style="margin-top:6px"><span class="pill p-qual">Qualified</span> <span style="font-size:10.5px;color:var(--text3)">Sara K.</span></div>
+              </div>
+            </div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)">Merge — same client</button>
+              <button class="btn btn-sm" style="color:var(--success);border-color:var(--success)">Not a duplicate — proceed separately</button>
+              <button class="btn btn-sm">View both deals</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text2)">18 notification rules · MVP scope</div>
+        <button class="btn btn-p btn-sm">Save Changes</button>
+      </div>
+
+      <!-- CHANNELS KEY -->
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px"><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> Sent to recipient inbox</div>
+        <div style="display:flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px"><span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span> CRM notifications feed</div>
+        <div style="display:flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px"><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span> Cannot be disabled</div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><span class="ct">Master Notification Rules</span><span class="cs">Toggle on/off · Recipients editable where noted</span></div>
+        <table class="dt">
+          <tr><th>Rule</th><th>Trigger</th><th>Recipient(s)</th><th>Channel</th><th>Timing</th><th>Active</th></tr>
+          <tr>
+            <td><strong>R-03</strong></td><td>New lead submitted</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>T+0 · Immediate</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-04</strong></td><td>New lead submitted</td><td>Lead / Client</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>T+0 · Immediate</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-05</strong></td><td>Meeting requested on form</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+0 · Immediate</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr style="background:#fef9f0">
+            <td><strong>R-07</strong></td><td>Deal inactive <input class="fi" type="text" value="1" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Assigned Rep</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+<strong>1d</strong> (editable)</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr style="background:#fef9f0">
+            <td><strong>R-08</strong></td><td>Deal inactive <input class="fi" type="text" value="3" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>T+<strong>3d</strong> (editable)</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr style="background:#fef9f0">
+            <td><strong>R-09</strong></td><td>Deal inactive <input class="fi" type="text" value="7" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+<strong>7d</strong> (editable)</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-10</strong></td><td>Deal stalled (30 days)</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+30d (editable)</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-12</strong></td><td>Proposal approval requested</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>On stage move</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-14</strong></td><td>Proposal approved — ready to send</td><td>Assigned Rep</td>
+            <td><span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>On approval</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+          <tr>
+            <td><strong>R-15</strong></td><td>Proposal rejected — rework needed</td><td>Assigned Rep</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>On rejection</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+          <tr>
+            <td><strong>R-18</strong></td><td>Rate sign-off required</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>On discount entered</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-22</strong></td><td>Contract sent to client</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>On Closed Won</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-24</strong></td><td>Deal moved to Onboarding</td><td>Kim W.</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>On signature</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+          <tr>
+            <td><strong>R-26</strong></td><td>Onboarding started</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
+            <td>On signature</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-29</strong></td><td>Re-engagement date reached</td><td>Assigned Rep</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>On date</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+          <tr>
+            <td><strong>R-31</strong></td><td>Meeting request submitted</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+0 · Immediate</td>
+            <td><input type="checkbox" checked></td>
+          </tr>
+          <tr>
+            <td><strong>R-32</strong></td><td>Meeting confirmed</td><td>All participants</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> (calendar)</td>
+            <td>On confirmation</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+          <tr>
+            <td><strong>R-35</strong></td><td>Meeting transcript ready</td><td>Assigned Rep</td>
+            <td><span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>Post-meeting</td>
+            <td><span style="background:#f0f0f0;color:#555;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Fixed</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-top:14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Notification Recipients — Configurable</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="fg"><label class="fl2">Management alert recipients (R-03, R-08, R-09, R-10, R-12, R-18, R-22, R-26, R-31)</label>
+            <input class="fi" value="aamer@eshipperplus.com, ahmed@eshipperplus.com">
+          </div>
+          <div class="fg"><label class="fl2">Onboarding handoff recipient (R-24)</label>
+            <input class="fi" value="kim.w@eshipperplus.com">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div class="screen" id="s-settings">
+      <div class="card" style="max-width:720px">
+        <div class="ch"><span class="ct">Pipeline Stage Probability Weights</span><span class="cs">Used for weighted forecast</span></div>
+        <div class="cb">
+          <table class="dt">
+            <tr><th>Stage</th><th>Probability</th><th>Notes</th></tr>
+            <tr><td><span class="pill p-new">New</span></td><td><input class="fi" style="width:70px" value="10%"></td><td style="color:var(--text3)">Uncontacted leads</td></tr>
+            <tr><td><span class="pill p-qual">Qualified</span></td><td><input class="fi" style="width:70px" value="25%"></td><td style="color:var(--text3)">Discovery complete</td></tr>
+            <tr><td><span class="pill p-prop">Proposal</span></td><td><input class="fi" style="width:70px" value="40%"></td><td style="color:var(--text3)">Quote sent</td></tr>
+            <tr><td><span class="pill p-neg">Negotiation</span></td><td><input class="fi" style="width:70px" value="65%"></td><td style="color:var(--text3)">Active negotiation</td></tr>
+            <tr><td><span class="pill p-won">Closed Won</span></td><td><input class="fi" style="width:70px" value="90%"></td><td style="color:var(--text3)">Verbal commit</td></tr>
+            <tr><td><span class="pill p-con">Contract</span></td><td><input class="fi" style="width:70px" value="95%"></td><td style="color:var(--text3)">Docs in progress</td></tr>
+            <tr><td><span class="pill p-ob">Onboarding</span></td><td><input class="fi" style="width:70px" value="100%"></td><td style="color:var(--text3)">Deal closed</td></tr>
+          </table>
+          <button class="btn btn-p" style="margin-top:12px">Save Weights</button>
+        </div>
+      </div>
+      
+      <!-- REFERENCE LISTS -->
+      <div class="card" style="max-width:720px;margin-bottom:14px">
+        <div class="ch"><span class="ct">Reference Lists</span><span class="cs">Used in deal forms — Industry, Lead Source, Owner</span></div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Industry</div>
+              <div id="industry-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Food & Beverage<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Retail<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">E-Commerce<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Auto Parts<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Distribution<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Apparel<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Pharmaceutical<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+              </div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-industry" placeholder="Add industry..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('industry-list','add-industry')">+ Add</button></div>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Lead Source</div>
+              <div id="source-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">WordPress<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Partner Portal<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Manual Entry<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Trade Show<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Cold Outreach<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Referral<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">LinkedIn<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+              </div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-source" placeholder="Add source..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('source-list','add-source')">+ Add</button></div>
+            </div>
+
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Deal Owners / Reps</div>
+              <div id="owner-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Ahmed D.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--text3);cursor:not-allowed" title="Cannot remove Admin">🔒</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Aamer A.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--text3);cursor:not-allowed" title="Cannot remove Admin">🔒</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Sara K.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">James T.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Priya L.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
+              </div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-owner" placeholder="Add rep name..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('owner-list','add-owner')">+ Add</button></div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      <!-- COST INPUTS (Admin only) -->
+      <div class="card" style="max-width:720px;margin-bottom:14px;border:1px solid var(--purple)">
+        <div class="ch" style="background:var(--purple-lt)"><span class="ct" style="color:var(--purple)">🔒 Cost Inputs — Profitability Calculations</span><span class="cs">Admin only · used in deal profitability panel</span></div>
+        <div class="cb">
+          <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px;background:var(--surface);border-radius:6px;padding:10px 12px">
+            These cost rates are used to calculate gross margin, contribution margin, and net profit on each deal. Set them as a % of revenue or as a fixed $ amount per unit. They apply globally until changed.
+          </div>
+          <table class="dt" style="width:100%">
+            <tr><th>Service</th><th>Cost Rate</th><th>Method</th><th>Last Updated</th></tr>
+            <tr>
+              <td>Warehousing & Fulfillment</td>
+              <td><input class="fi" value="60%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
+              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per pallet</option><option>$ per order</option></select></td>
+              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
+            </tr>
+            <tr>
+              <td>Freight</td>
+              <td><input class="fi" value="72%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
+              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per shipment</option><option>$ per skid</option></select></td>
+              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
+            </tr>
+            <tr>
+              <td>Small Parcel Shipping</td>
+              <td><input class="fi" value="68%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
+              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per shipment</option></select></td>
+              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
+            </tr>
+            <tr>
+              <td>Cross-Docking</td>
+              <td><input class="fi" value="55%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
+              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per pallet</option></select></td>
+              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
+            </tr>
+            <tr>
+              <td>Value Added Services (VAS)</td>
+              <td><input class="fi" value="50%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
+              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per hour</option></select></td>
+              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
+            </tr>
+          </table>
+          <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fg"><label class="fl2">Monthly Fixed Overhead Pool</label><input class="fi" value="$85,000" placeholder="Total fixed costs / month"></div>
+            <div class="fg"><label class="fl2">Variable Costs Beyond Direct (% of revenue)</label><input class="fi" value="7%" placeholder="e.g. 7%"></div>
+          </div>
+          <div style="margin-top:4px;font-size:10.5px;color:var(--text3)">Fixed overhead is allocated to each deal in proportion to its revenue share of your total pipeline. Variable costs cover labour, admin, etc. above direct service cost.</div>
+          <button class="btn btn-p btn-sm" style="margin-top:14px">Save Cost Inputs</button>
+        </div>
+      </div>
+
+<!-- PARTNER REP DIRECTORY -->
+      <div class="card" style="max-width:720px;margin-top:14px;margin-bottom:14px">
+        <div class="ch"><span class="ct">Partner Rep Directory</span><span class="cs">Populates the rep dropdown on the Partner Page</span></div>
+        <div class="cb">
+          <div style="background:var(--info-bg);border-radius:6px;padding:9px 12px;font-size:11.5px;color:var(--text2);margin-bottom:14px">
+            Upload a CSV or Excel file with two columns: <strong>Company Name</strong> and <strong>Rep Name</strong>. Header row required. Changes take effect immediately.
+          </div>
+          <div style="margin-bottom:14px">
+            <table class="dt" style="width:100%">
+              <tr><th>Company Name</th><th>Rep Name</th><th>Added</th><th></th></tr>
+              <tr><td>Acme Logistics Brokers</td><td>Jordan Smith</td><td>Apr 10, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
+              <tr><td>NorthStar Partners</td><td>Leila Hassan</td><td>Apr 10, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
+              <tr><td>Apex Freight Group</td><td>Mike Torres</td><td>Apr 12, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
+            </table>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-p btn-sm">⬆ Upload CSV / Excel</button>
+            <button class="btn btn-sm">⬇ Download Current List</button>
+            <span style="font-size:10.5px;color:var(--text3)">3 reps · last updated Apr 12, 2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DUPLICATE DETECTION -->
+      <div class="card" style="max-width:720px;margin-top:0;margin-bottom:14px">
+        <div class="ch"><span class="ct">Duplicate Detection</span><span class="cs">Flags matches to Aamer + Ahmed</span></div>
+        <div class="cb">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div><strong>Match on company name</strong><div style="font-size:10.5px;color:var(--text3)">Fuzzy match — flags if ≥ 80% similar</div></div>
+              <input type="checkbox" checked>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div><strong>Match on contact email</strong><div style="font-size:10.5px;color:var(--text3)">Exact match</div></div>
+              <input type="checkbox" checked>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0">
+              <div><strong>Match on phone number</strong><div style="font-size:10.5px;color:var(--text3)">Exact match — company name must also match</div></div>
+              <input type="checkbox" checked>
+            </div>
+          </div>
+          <button class="btn btn-p btn-sm" style="margin-top:12px">Save Detection Settings</button>
+        </div>
+      </div>
+
+      
+    </div>
+
+  
+
+
+
+<script>
+
+// ─── Leads sort/filter ───
+let leadSortCol = -1, leadSortAsc = true;
+        function sortLeads(col) {
+          const tbody = document.getElementById('leads-tbody');
+          const rows = Array.from(tbody.querySelectorAll('tr'));
+          if (leadSortCol === col) { leadSortAsc = !leadSortAsc; } else { leadSortAsc = true; leadSortCol = col; }
+          document.querySelectorAll('#leads-table th').forEach((th,i) => {
+            th.classList.remove('sort-asc','sort-desc');
+            if (i === col) th.classList.add(leadSortAsc ? 'sort-asc' : 'sort-desc');
+          });
+          rows.sort((a,b) => {
+            const aCell = a.cells[col], bCell = b.cells[col];
+            const aVal = aCell.dataset.val || aCell.textContent.trim().toLowerCase();
+            const bVal = bCell.dataset.val || bCell.textContent.trim().toLowerCase();
+            const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+            if (!isNaN(aNum) && !isNaN(bNum)) return leadSortAsc ? aNum-bNum : bNum-aNum;
+            return leadSortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+          });
+          rows.forEach(r => tbody.appendChild(r));
+        }
+        function filterLeads() {
+          const search = document.getElementById('lead-search').value.toLowerCase();
+          const stage = document.getElementById('lead-filter-stage').value.toLowerCase();
+          const source = document.getElementById('lead-filter-source').value.toLowerCase();
+          const owner = document.getElementById('lead-filter-owner').value.toLowerCase();
+          const rows = document.querySelectorAll('#leads-tbody tr');
+          let visible = 0;
+          rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const rowStage = row.cells[5]?.textContent.trim().toLowerCase() || '';
+            const rowSource = row.cells[3]?.textContent.trim().toLowerCase() || '';
+            const rowOwner = row.cells[6]?.textContent.trim().toLowerCase() || '';
+            const match = (!search || text.includes(search))
+              && (!stage || rowStage.includes(stage))
+              && (!source || rowSource.includes(source))
+              && (!owner || rowOwner.includes(owner));
+            row.classList.toggle('hidden-row', !match);
+            if (match) visible++;
+          });
+          document.getElementById('lead-count').textContent = visible + ' lead' + (visible !== 1 ? 's' : '');
+        }
+        function clearLeadFilters() {
+          document.getElementById('lead-search').value = '';
+          document.getElementById('lead-filter-stage').value = '';
+          document.getElementById('lead-filter-source').value = '';
+          document.getElementById('lead-filter-owner').value = '';
+          filterLeads();
+        }
+
+// ─── Notifications ───
+function markOneRead(btn) {
+          const item = btn.closest('.notif-item');
+          item.classList.remove('unread');
+          item.classList.add('read');
+          item.style.opacity = '0.6';
+          item.style.background = '';
+          const dot = item.querySelector('div[style*="border-radius:50%"]');
+          if (dot) dot.style.background = 'var(--border)';
+          if (btn.tagName === 'BUTTON') btn.remove();
+          updateUnreadCount();
+        }
+        function markAllRead() {
+          document.querySelectorAll('.notif-item.unread').forEach(item => {
+            item.classList.remove('unread'); item.classList.add('read');
+            item.style.opacity = '0.6'; item.style.background = '';
+            const dot = item.querySelector('div[style*="border-radius:50%"]');
+            if (dot) dot.style.background = 'var(--border)';
+            const btn = item.querySelector('button[onclick*="markOneRead"]');
+            if (btn) btn.remove();
+          });
+          updateUnreadCount();
+        }
+        function updateUnreadCount() {
+          const n = document.querySelectorAll('.notif-item.unread').length;
+          const el = document.getElementById('notif-unread-count');
+          if (el) el.textContent = n + ' unread';
+        }
+        function filterNotifs() {
+          const role = document.getElementById('notif-role-filter').value;
+          const type = document.getElementById('notif-type-filter').value;
+          document.querySelectorAll('.notif-item').forEach(item => {
+            const roleMatch = role === 'all' || item.dataset.role === role;
+            const typeMatch = type === 'all'
+              || (type === 'unread' && item.classList.contains('unread'))
+              || item.dataset.type === type;
+            item.style.display = (roleMatch && typeMatch) ? '' : 'none';
+          });
+        }
+
+// ─── Settings ref lists ───
+function addRefItem(listId, inputId) {
+              const val = document.getElementById(inputId).value.trim();
+              if (!val) return;
+              const list = document.getElementById(listId);
+              const item = document.createElement('div');
+              item.className = 'ref-item';
+              item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px';
+              item.innerHTML = val + '<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button>';
+              list.appendChild(item);
+              document.getElementById(inputId).value = '';
+            }
+
+const LOGO_H_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAFOBOMDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAYHBAUCAwgBCf/EAFsQAAIBAwIBBggFDwgJBAAHAQABAgMEBQYRIQcSEzFBUQgiYXGBkaGxFDJywdEVFiMzNTZCUlNUYnOSk7I0Q1V0gpSz0hcYN1Z1laLC4SRjg/AlJkVkhKPxtP/EABsBAQACAwEBAAAAAAAAAAAAAAADBAIFBgEH/8QAOREAAgEDAgMECAUFAAIDAAAAAAECAwQRBTESIUETMlFxImGBkaGx0eEUFTRSwSMzQ1PwBvEkQmL/2gAMAwEAAhEDEQA/APGQAAAAAAAAAAAAAAAAAANnisFk8ltKhbuNJ/zlTxY/+fQSrG6Ls6W076tO4l2wj4sfpfsLtvp9xX5xjy8WYOaRBKcJ1JqFOEpyfUords29lpnM3STVo6MX21XzfZ1+wsazsrSzhzLW2pUV282OzfnfaZBuKOhQXOpLPkRuq+hCbTQ83s7q/jH9GlDf2v6DaW+jsPT+2KvW+XU292xIgbGnplrDaHv5mDqSfU1dHT+GpLxcdRfyk5e8yoY7H09uZY2sdurajFfMZQLUaFKO0UvYY5Z0q1tU91bUU1+gj58Etfzaj+7R3gz4I+AyYlTGY2p8fH2kvPRj9Bi1tO4Wr8bH0l8huPuZtQRyoUpd6KfsGWRq40ZiqifRTuKL7Nppr2o1d3oi4ju7W9pVPJUi4+1bk5BVqaXaz/8Apjy5GSqSRVt9p7L2m7qWU5xX4VPx17DVtNNppprrTLmMS/xthfR2u7WlVf4zXjL09Zrq2grelL3mareJUYJvk9FUpbzx9y6b7KdXivWuK9pFsnir/Gy2u7ecI78JrjF+lGmuLGvb85x5ePQljNPYwQAVDIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7KFGrXrRo0acqlST2jGK3bJpp/SFOlzbjK7VJ9aop+KvO+3zdXnLVrZ1bmWIL29DGUlHcjWGwl/lZJ29Lm0t+NWfCK+n0E2w2lsdYJTrRV3W/GqLxV5o9XvN5CMYQUIRUYxWySWySOR09ppVGhzfpP1/QglUbPh9ANoRgAAAAAAAAAAlvJlyeaj5QcrUssFQpqlQSdzdVpc2lRT6t3xbb2eySb4PsTZhOpGnFyk8JHqWSJAv7L+C9qi3x06+O1BjL66jHnfB5QlS577oye637t9l3tFFZbH32JyVxjcla1bW8tpunWo1I7ShJdjIqF1Rr57OWT1xa3MYAFgxAAABxnGM4uM4qUWtmmt0zkACM5nSFldKVSyfwWs/wVxg/R2ej1ELyuLvcZW6O7ouCb8Wa4xl5mW0ddxQo3FGVGvThUpyWzjJbpmpu9Io1ucPRfw9xJGo1uU4CX6g0hOmpXGK3qQ63Qb8ZfJfb5uvzkRlFxk4yTUk9mmuKOYuLWrby4aiLEZKWx8ABXPQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ2Gxd3lbnobaHBfHm/iwXl+gyNOYO4y9xw3p20H9kqfMu9lkY+ytrC1jbWtNQpx9bfe+9m20/TJXPpz5R+ZHOpw8kYuCwtniaPNox59Zrx6sl4z+heQ2YB1lOnGnFRgsIrt53AAMzwAAAAAAAAAAGVZ43I3iTs8fd3G7SXRUZT6+rqR42luDFPa3gk2ljb8jFjXteb091c3FS7aXHpFUcEn/AGIw9Z4yyGPv8dX6DIWVzZ1dt+ZXpSpy28zRaPg88rVXk/yUsVlVKtp69qqdZRW8rao0l0sV2rZLnLuSa4rZ67VKE7i3xT338ySm+F8z2uVVy98kdjygY15HHRpWuoraG1Gs+EbiK/m6nzS7PMWdj7y1yFjRvrG4pXNrXgqlKrTkpRnFrdNNdaO85GlVnQmpweGiw0mj818tj77E5K4xuStatreW03TrUakdpQkuxmMe3OXvkjseUDGvI46NK11FbQ2o1nwjcRX83U+aXZ5jxZlsffYnJXGNyVrVtby2m6dajUjtKEl2M7KxvoXUMrk1uitODizGABeMAAAADY0cDnK1KFajhsjUpzipQnG1m1JPimntxQrYHOUaU61bDZGnThFynOVrNKKXFtvbgjDtIbZRh2sNso1xo9R6dtcrB1YbUbtLhUS4S8kvpN4DGtRhWjwTWUSJtc0VBkLK5sLmVvdUnTqR7+prvT7UY5bGaxVrlbV0biO0lxhUXxoP/wC9hWuZxlzirx29xHh1wmuqa70cjf6dO1fEucf+3LMJ8RggA1pmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADbaawtbL3e3jQtoP7LU29i8pj4TG18rfRtqK2XXOe3CEe8tDHWVvYWcLW2hzYQXpb735TbaZp/4mXHPur4kdSfDyRzs7ahaW0Le3pqnSgtopHcAdckksIrAAHoAAAABL+Trk31bry6UMFjpfBYy5tW9r7woU+/eXa/JFN+QwnUjTjxSeEepN7EQN/pHReqtW1+i09g7y/XOUZVYQ2pQf6U3tGPpZ6p5OvB20hp+NK71A3qHIR2k1WjzbaD7lT/AAv7Tafci5bW3t7S3p21rQpUKFOPNhTpwUYxXckuCRpLjXIR5UVn1vYljS8TyvpLwXs3cqFbU2ftMdBrd0LSDr1PM5PaKflXOLT074PXJriknc4+7y9Vfh3tzLbf5MOavWmWyDT1dSuau8seXIlUIo0WJ0bpLEqKxmmMPaOPVKlZU4y9e27N6AUpSlJ5byZGl1ppfC6vwFfC5yzhcW1WL5smvHpS7Jwf4Ml3+h7ptH59aqxFXAamyeDrzVSpYXdW2lNdUuZJx39O25+gWuNW4LRuCrZfPX1O3pQi3Tp7rpK8kviQj+FJ8PN1vZcT8/NT5avntR5LN3MVGtf3VS5nFdUXOTlsvIt9jodC7TEs93+SGtgs3wfuWG60JfQw2ZnVudOV5+NHjKVpJvjOC7Y98fSuO+/szH3lrkLGjfWNxSubWvBVKVWnJSjOLW6aa60eO/B55G7jWt1T1BqClUoacoz8WPGMr2SfGMX1qCfXL0Lju17GtLe3s7WlaWlCnQt6MFTpUqcVGMIpbJJLgkkVNZdDtv6fe6+H/syp5xzO0ovwudDY3J6KrayoUYUcri3TVWols69GU1Dmy73FyTT7t12ovQobwute43H6QraJta8K2VyLpu4px4/B6MZKe8u6UnFJLr23fDhvU07tPxMOz8fh1Mp44Xk8jgA7gqAAAHonSX3qYj+o0f8ADiNW/epl/wCo1v8ADkNJfepiP6jR/wAOI1b96mX/AKjW/wAORxn+f2/ycP8A5/b/ACedgAdmdwDDy+OtsnZytrmO664yXXB96MwGM4RnFxkspnqeCpczjbjF3sra4W/bCaXCa70YRa+exVDLWLt6vizXGnU24wf0FX31rXsrupa3EOZUpvZr515DjtRsHazyu69voWYT4kdAANaZgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA50KVSvWhRpQc6k5KMYrtZwJvoDD9HT+qtxHx5pqgmupdsvT1f8A+lqztZXNVQXt8jGUuFZN5pvE08Tj1RW0q0/Gqz733eZG0AO4p040oKEVyRVbzzAAMzwAAAHZaW9xd3VK1taFSvXqyUKdKnFylOT4JJLi2bDSun8vqjOW+GwdlUvL2u9owj1RXbKT6oxXa3wPaHIryQYXk9s4XlZU8hqCpDateuPCnv1wpJ/Fj2b9b49S4Khe39O1jz5vwM4QcituRzwc4KNDNcoHjSaU6eKpy2S7umkuv5MfS+tHpCxtLWws6VnZW1G2tqMVClSpQUYQiupJLgkdwOSuburcy4qj+hZjFR2AK45UuWTSWg1UtK1d5PLxXCwtpJyi/wD3JdUPTu/IeYOUXlt1xrCVS3+HvEY2e6+CWMnDnR7pz+NLy8UvIWLXTK9xzxheLMZTUT1lrblS0LpB1KWYz9v8LhunaW/2atuuxxjvzX8rYpzVPhSwUp0tMaXcl+DXyFbb/wDrh/nPMr4vdg3tHRbeHf8ASZE6rexaWd5fuU7Kc+NPM0cbTn+BZ2sI7eaUlKS9ZEcjr/XGQ3+Gavz1aLe/Md/UUd/kp7drI2DYQtqMO7BL2GDk31O26ubm6qdLdXFWvPbbnVJuT287Lb8HLkl+v3ITzWZ50NP2NVQnCLaldVEk+jT7IpNc59fFJde6p89q+CTe2NzyM2Nta8xV7S5r07pLr57qOab/ALEoeoqapXnQt8093y8jKmsy5lr2lvb2drStLShToW9GCp0qVOKjGEUtkklwSSO0FR+EBywWmgrCWIxE6VzqS4hvCD2lG0i1wqTXf+LHt63w6+Ro0Z15qEFlssNpLLHhAcsFpoKwliMROlc6kuIbwg9pRtItcKk13/ix7et8Ovxjkb27yN/Xv7+5q3N1cTdStWqycpTk3u22xkb27yN/Xv7+5q3N1cTdStWqycpTk3u22zoOzsrKFrDC5t7srTm5MG90dpq41LdV7e3uaVB0YKbc03vu9uw0RYfId92Mh/V4/wARJeVJUqMpx3RSvasqVCU4bof6Ksl/Stp+xIf6Ksl/Stp+xItkHP8A5pc+PwOb/Nrr93wRiYW0lYYeysZzU5W9vTpOS6m4xS39gzVpK/w97YwmoSuLepSUn1Jyi1v7TLBQ43xcXU1/G+Li6lTf6Ksl/Stp+xIf6Ksl/Stp+xItkF/80ufH4Gw/Nrr93wRQWstL3GmattTuLqlXdeMpJwTW223f5zQFkcun8sxX6up74lbm/s6sqtGM5bs6Oxqyq0Iznu/qDQaxwiydn8IoR/8AV0V4u34cfxfo/wDJvwS16MK8HCezLieHkphpp7PgwSnXmH+C3X1Rt47Ua0vsiX4M+/zP3kWOGuaEreo6cuhbi8rIABAegAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGy05jZZTKU7fZ9EvGqyXZFdfr6vSWnThGnTjThFRhFJRS6kkaHQ+NVjiVXmvs1ztN+SP4K+f0kgOx0q07CjxPeXP6FapLLAANoRgAAA2elcBldT5+1weGtZXF7dT5sIrqiu2Un2RS4t9iRgWtvXurmla21KdavWmoU6cFvKcm9kku1tnt/wf+S+25PtOK4vKcKmoL6mneVeD6KPWqMX3Lhv3tb9SW1G/vY2tPPV7IzhDiZs+Rvk0xHJ1gPg1so3OUuIp3t647SqP8WPdBdi9L4k7BrtS5zF6bwlzmczd07Sytoc6pUn7El2tvgkuLZxk5zrT4pc2yzhJGRlL+yxePr5DI3VG0tLeDnVrVZqMIRXa2zytyzeENkMvOthtDVK2Ox3GNTIbc24rr9D8nHy/GfD4vFEI5a+VjMcomSdCLnZYKhNu2slL43dUqfjT9kepdrdbnS2GkxppTrLL8PAhnUzyR9nKU5uc5OUpPdtvdtnwA3hCAAAAIxcpKMU3JvZJLiyS4jQGt8tTVXHaSzVxSl1VI2c1B/2mtvaYynGHOTwepNkaJTyb6/1JoDLSv8AAXUYxqpK4tq0edRrpdSlHhxXY001u+PFm9teQ3lUuYuVPSVaKX5S6oU36pTRwveRLlStFvV0jcy4b/YrijV/gm/UV53FtUThKUWvNHqjJdCbZjwn9XXWNlb47DYvH3Mo7O58aq4vvjGXDfz85FG5G9u8jf17+/uatzdXE3UrVqsnKU5N7tts3Ga0VrDCxc8rpfMWdNbrpKtnNQ/a229poD23oUKSbopc/AScnuAAWTEGy0/nclgq1Wtja0aU6sebNuClut9+01oMZRjNYksoxnCM1wyWUSv/AEh6q/Pqf93h9A/0h6q/Pqf93h9BFAQ/hKH7F7iD8Fb/ALF7j0dp64q3mAx13XkpVq9rSqVGltvKUE3w87GobirZ4DI3dCSjWoWtWpTbW+0owbXDzo6tJfepiP6jR/w4jVv3qZf+o1v8ORyeF22PX/Jx/Cu2x0z/ACVD/pD1V+fU/wC7w+gf6Q9Vfn1P+7w+gigOs/CUP2L3HYfgrf8AYvcbTUGfymenRnk68asqKahtTUdk9t+peQ1YBNGEYLhisInhCMFwxWEAAZGR0X9rSvbOra14706kdn5PKVPkbSrY31W0rLx6ctt+9dj9Jb5EOUTG9JQp5OlHxqfiVdvxX1P18PSabWbTtaXax3j8iWlLDwQcAHJlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHKEZTkowi5SfUkt2AcQbCjhMvWScMdcbPtlBx95kR0xnZLdWD9NSC+cnjbVpbQfuZ5xLxNODaVdP5qmt5Y+s/k7S9xr69Cvby5lejUpS7pxcX7TCdGpDvRa9gTTOsAEZ6AAAc+hq/kp/ssdDV/JT/ZZZmkMj9UcNTlN71qX2Op5Wup+lfObg39LRYVYKcanJ+r7kLqtPGCm+hq/kp/ssdDV/JT/ZZcgJfyBf7Ph9zztvUU1KE4reUJRXlRxLA5R/uHR/rMf4ZFfmmvbX8NV7POSWMuJZAAKhkAAAAAAAAAADlThKpUjThFylJpRS7WAcT7s9t9nt1bli6e0zZ2FGNW7pQuLpreTkt4w8iXzkg2XN5uy2222N7R0OpOOZyw/DGSJ1UtimQWNqLTNpfUJ1bSlChdJbpxW0Z+Rr5yu6kJU6kqc4uMotqSfYzXXllUtZYls9mZxkpHEAFMyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABeHIHyaaX1lo67ymbpXU7ilkJ0IulXcFzFTpyXDv3kz1LLwV7q5hbU+0nsUeD1l/oH5P/zfIf3t/QYma5D9B2uHvbqjb36qUbepUhvdNrdRbXYZ9mzWrXbVvHP3fc8sAAjN0AAAAAADY6bsHksxQtmm6e/PqfJXX6+r0muJ3yc2PR2Va/mvGrS5kPkrr9vuLun2/b3EYvbdmM5YRK0klslskfQDuCoAAAACWckmjbnXeurHA0edGhKXS3lWK+1UI/GfnfCK8skYTnGnFylsj1LPIuvwROTWMkuUDM2++zlDFU5rt4qVbb1xj6X3M9NHRjrO1x9hb2FlQhQtbalGlRpQXCEIrZJeZI7zhru5lc1XOXs8i1GPCsGPk760xmPuMhf3FO2tLanKrWq1HtGEUt22eH+XflQveUTUDhbupb4K0m1ZW7ezn2dLNdXOfsXDvbnPhZ8pssplJ6Fwty/gFnP/APEakJcK9ZdVP5MH198vko8+nQaRYKnFVprm9vURVJ55IAA3hCAFxeyPQnIl4Plxl6dHPa6hWs7GW0qONW8KtZd9R9cI+T4z/R7a9xc07eHFUZlGLlsU/oXQ2qNbXztdO4qrdKL2q134lGl8qb4Lzdb7Ez0ToTwY8LZxhc6xytXJ1ls3a2bdKgu9Ofx5LzcwvnEY3H4jH0sfi7K3srSitqdGhTUIRXmRlnM3OsVqrxT9FfH3k8aaW5otM6O0rpmEY4HAY7HyitukpUF0jXlm/GfpZvQfJyjCDnOSjGK3bb2SRqpSlJ5k8skPoNNdas0taz5lzqXDUJbtc2pfUovddfXI52Wp9NX01Cy1DibmTeyjRvac233cGe9nLfANsRfVXJ7orVHPlnNN4+6qz3cq6p9HWf8A8kNpe0lAPITlB5i8MHmnXvgwU3GpdaKzMoyXFWeQe6fkjUiuHck152eetV6azulcrPF6gxlewuo8VGouE1vtzoyXCUfKm0fo2R3lB0bg9caeq4bOWqqQkm6NaKXSW8+ycH2P2PqfA3FprNWm1GrzXxIpUk9j88Ab7lA0rkdGasvdPZOKda2n4lSK8WrTfGM4+Rr1PddaNCdTGSnFSjsyBrAABkeHonSX3qYj+o0f8OI1b96mX/qNb/Dkedgab8o9Pj4+udvuaP8AJv6nHx9c7fcAA3JvAAAAAAAdV1Qp3NtUt6q3hUi4yXkZ2g8aTWGCn7+2qWd7Wtavx6U3F+XynQSzlGsejvaN/BcK0eZP5S6vZ7iJnCXdDsK0qfgW4vKyAAVjIAAAAAAAAAAAAAAAAAAAAAAAAHfY2dzfXMbe1pSq1Jdi7PK+5HLG2dfIXtO1t47zm/Ql2t+Qs/CYu2xVoqFCO8ns6lR9c33/APg2On6fK7ll8or/ALkYTnwmiw+jbeklUyVR15/k4NqK9PW/YSW0tLW0hzLa3pUY90IpbneDq6FpRoLFOOPmV3JvcAAsmIOFWnTqwcKsIzg+uMlumcweNZBHsrpPGXacreLtKvY4fF9Mfo2ITmcPe4qrzbmnvBvaNSPGMv8A73FrnVc0KNzQlQr041Kc1tKMlwZq7vSaNdZguGXwJI1GinQbvVOCqYi4U6e87So/Ek+uL/Ffl95pDk61GdGbhNYaLCeVlG20xmJ4e+dRxc6FRKNWK6/I15UWJjspYZBL4JdU6kmt+ZvtJLzdZUpI+Tz7vy/US96NrpV9UpzjR3i37iOpBNZLEAB1hXIxyj/cOj/WY/wyK/LA5R/uHR/rMf4ZFfnH6z+qfkizS7oABqiQAAAAAAAAAG60VShV1Jaqa3UedJLyqL2NKZ2Cvfqdlre7abjCXjJfitbP2MntpRhWhKWyaPJc0WyDhSqQq0o1aUlOE0nGS6mjmd6nkpgrLWtKFLUl0oLZS5smvK4rcsqtUp0aU6tWahCCcpSfUkiqc7e/VHLXF2k1GcvFT/FS2XsRpNdnHsYx65JaS5mCADliwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD1F4JX+zjIf8Xqf4NE8unqLwSv9nGQ/wCL1P8ABoklPvGn1z9I/NFwmv1L97mT/qdX+BmwNfqX73Mn/U6v8DJzjYd5HgwAFQ+lAAAAAAH2MXKSjFbtvZItzFWsbLHW9pHb7FBRbXa+1+vcrjSFr8K1Dawa3jCXSS/s8V7di0TpdBo4jKq/IgrPoAAdAQgAAA9h+CJoyOC0LPUt3R5t/mnzoOS4wt4tqCXynvLyrm9x5X0Fp+vqvWeJ09b85SvrmNOUordwh1zl/ZipP0H6IWNrb2NlQsrSlGlb29ONKlTj1QhFbJLzJI0OuXHDBUl15vy/75E1KPU7ivPCA14tB6Br3dtUiste721hHtU2vGqbd0Fx7t+au0sM8PeEzrOWreUu6oW9Xn43EN2dqk/FlJP7JP0yW2/aoxNRplr+IrpPZc2STlworCpOdSpKpUlKc5NuUpPdtvrbZ8AO1KoC4vZA9AeChyXwzV/HW+dtufjrOptYUakeFetHrqNdsYPq75fJZBc3ELem6kjKMeJ4JZ4N3IrHEwttY6utlLIySq2FlUW6tl1qpNflO1L8Hr+N8X0KAcRc3M7ibnMtJJLCBBeUvlW0foKDpZW+dxkXHeFha7TrPucuO0F5ZNeTcqfl65fZ2te50zoS4i6sN6d1lY7NRfU40ezfs5/7PZI8x3Fatc16lxcValatUk5TqVJOUpN9bbfFs2tjo7qJTrcl4dSOdTHJF0a38JDWuYnUo4Gnb4C0fBOmlWrteWclsv7MU13lT5zUOdztZ1s1mchkZvtubiVT1bvgawHRUbWjRWIRSIXJvcAAnMTdae1bqjT01LCagyVgl+BRuZRg/PHfZ+lFw6G8JnU2OlC31Xj7fNW++0q9FKhXXl4LmS820fOUICtWtKNZenFMyUmtj9ENA6ywGuMFHMafu3Wo87mVac482pRntvzZx7H60+xskJ5p8CCxyUKepcjKM442q6FGDae1SrHnN7dnixkt/lI9LHG3tCNCvKnF5SLMXlZPOnhs6dpVcJhdVU6cVXt67sa0l1yhNOcN/JFxl+2eWT2b4Ycox5H2m0nLI0EvK9pP5meMjptGm5WqT6NkFVekAAbUjB3WVpdX11C1sratc3FR7QpUabnOT7klxZJuS7QWa5QNRwxWKp8yjDaV3dzjvTt4d772+yPW35N2vbXJxyfaa0Fio2eDsoqvKO1e8qJSr13+lLu4fFWyXca2+1Kna+jvLw+pJCDkeOsZyKcqORodNb6Qu4R4cLitSoS/ZqTi/YaXU/J9rXTNGVfN6ZyNpQi9pV3S59Jeecd4r1n6FHySUouMkmmtmn1M1Mdeq55xWPaSdkj8zwer/CB5DMfkMbdan0XYxtclQi6txYUIJU7mK4twiviz247LhLu36/KD4PZm+tLundQ4oe4hlFxYABaMQAADUavtPhmAuYJbzprpY+ePF+zcq8uaSUouMlumtmiocnbO0yFxav8AmqkorypPgzmtdo4lGouvInpPoY4AOfJgAAAAAAAAAD6k20km2+pI2tlpzMXaUoWc6cX+FVfM9j4klOlOo8QTfkeNpbmpBKaWicjJb1Lq2h5nJ/McqmiL5L7HeW0n+lzl8zLX5bdYzwMx44+JFAbq80vmbZOXwbportpS53s6/YaepCdObhOMoyXBqS2aK1SjUpPE4tGSaexxABEegAAE+5PcdGhjpX84/ZK7ag+6Cfzv3IlJjYygrbHW1BLbo6UY+pGSd7aUVRoxguiKknl5BxqThTpyqVJRhCK3lKT2SRyILyg5SpO8WMpTcaVNKVVJ/Gk+KT8iW3rMby6ja0nUYjHieDY5LWdlQm6dnRndNcOc3zY+jtfqNW9b3+/CztkvLzvpIqDlqmrXU3nix5FhU4om1lrenKSjeWUoL8elLf2P6SUY++tL+gq1pWjVh27da8jXYVCZeKyFzjbuNzbT2kvjR7JLuZZtdaqwlirzXxMZUk9i3AYuLvaWRsKV3R+LUXFdsX2oyjqIyUkpLZlcxsjZ0b+yq2ldbwqR28z7GvMVRf2tWyvKtrWW06UnF+XylwEF5R7NU7y3vorhVi4T866n6n7DTa3bKdJVVuvkS0pYeCJEj5PPu/L9RL3ojhI+Tz7vy/US96NDp/6mHmTT7rLEAB3JUIxyj/cOj/WY/wAMivywOUf7h0f6zH+GRX5x+s/qn5Is0u6Abax07mLuKlTs5wg/wqj5nv4mzpaJyDS6S6toeZyfzFSnY3FRZjBmTnFdSLAldTRF8l9jvLaT/S5y+ZmsvtNZi0i5StXVgvwqT53s6/Ye1LC5prMoMKcX1NOD6002mmmuDTPhUMgAAADuoWl1Xhz6NtWqxT23hBtb+g7PqdkPzG6/dS+gzVOT5pDJl4XP5DFLo6M41KO+/RVFul5u43f181uZt9Toc7v6V7erYjP1OyH5jdfupfQPqdkPzG6/dS+guUru7pR4YN48jBxi9zLzWeyGVXMr1FCjvv0VNbR9PeaoyvqdkPzG6/dS+gxSrWlUnLiqZz6zJJLYA5U4TqTUKcJTk3soxW7ZkfU7IfmN1+6l9BgoSlsj0xQZX1OyH5jdfupfQPqdkPzG6/dS+g97OfgzzKMUGV9Tsh+Y3X7qX0HTXoV6DSr0alJvilOLW/rPHCS5tHuTrByhGU5qEIuUnwSS3bNvZ6ZzNylJWjpRfbVko+zr9hlTo1KrxCLZ42luaYEqp6IyD+2XdtHzc5/MhU0RfpfY7u2k/wBLnL5mWvy26xngZjxx8SKg3F9prMWkXKVo6sF+FSfO9nX7DUNNNppprg0yrUo1KTxNNGSaex8ABGegHbQt69dtUKNSq118yLlt6jt+p2Q/Mbr91L6DJQk1lIZMUGV9Tsh+Y3X7qX0D6nZD8xuv3UvoPezn4M8yjFBlfU7IfmN1+6l9BjzhKnNwnGUZRezTWzR44Sjuj04g7rW1uLqp0dtQqVp90Itm5ttI5msk506NDf8AKVPo3JKVvVq9yLZ45JbmgBLIaIvWvGvbdPyJs6q+isnBN0q9tU8nOafuLD026SzwMx44+JGAZ+Qw+SsE5XVpUhBfhpc6PrXAwCnOEoPElhmaeQADEAAAAAAAAzLDGZC+/klpVqr8ZLaPrfAyjCU3iKyxsYYJJb6My1Rb1J21HySm2/YjIeh7zm8L2hv3c1ltabdNZ4GYccfEiYJFc6Oy9JN0+gr+SE9n7djS3lld2c+ZdW9Wi+znR2T8z7SGrbVqXfi0ZKSexjgAgPQAdtC3uLjfoKFWrzevmQctvUepNvCB1AyvqdkPzG6/dS+gfU7IfmN1+6l9Bl2c/BnmUYoMr6nZD8xuv3UvoH1OyH5jdfupfQOzn4MZRig+zjKE3CcXGUXs01s0z4YHoB2UKNavU6OhSqVZv8GEXJ+w2VLTebqreOPmvlSjH3skhRqVO5FvyR42luakG1udO5m2oTr1rJxpwi5SaqReyXW+DNUKlKdN4nFrzCaewAJD9Y+tf9z9Qf8ALa3+UjPJTjDvPBHgSH6x9a/7n6g/5bW/yj6x9a/7n6g/5bW/ynuGYdvT/cveR49ReCV/s4yH/F6n+DRPP31j61/3P1B/y2t/lPRvgw4rKYfQN9bZbG3mPryylSpGndUJUpOLpUkpJSSe26a38jM6a5mp1urCVq0mnzRapr9S/e5k/wCp1f4GbAwdQ051cBkaVKEpzna1YxjFbuTcHsku8nOPh3keCgSH6x9a/wC5+oP+W1v8o+sfWv8AufqD/ltb/KVcM+jdvT/cveR4Eh+sfWv+5+oP+W1v8o+sfWv+5+oP+W1v8owx29P9y95HgZ17hsvZXM7W9xV9bV4bc+lWt5wnHdbrdNbrg0weGalF80yQ8mtvzrq7umviQjTXpe79yJwRrk7o9Hg51WuNWtJ7+RJL5mSU7XS6fBaw9fP3leo8yAANgYAAAF/+BXp5Xmr8rqStTThjrZUKLfZUqt7teaMZL+0esioPBFwyxnJBQvZQiqmUu61y3t43NT6OKf7ttfK8pb5xOp1e1uZPw5e4tQWIkQ5ZNTvSHJtmc5TqKFzTodFavfj003zINd+zfO8yZ+fsm5Nyk22+Lb7T1D4bmedPHYDTVKp9uqTva8V3RXMp+jeU/UeXjfaLR4Lfj6yIqry8AAG4IjfcnumLzWOssbpyybjO7qqM6m2/RU1xnN+aKb8vV2n6DYHFWODwtnh8ZQjQs7OjGjRguyKW3Hvb62+1ts8+eBVpSNKwyus7mn9krS+A2jfZBbSqP0vmL+yz0gclrNy6lbs1tH5lmnHCyDzf4VPK1Us3W0Jpq7cK8o7ZW5pS4wTX2iL72vjNdni9skrd5aNaQ0Jyf32bi4fDZLoLGEuPOry35vDtSScmu6LPA15c17y7rXd1WnWuK03Uq1JveU5N7tt9rbJNHslVl201yW3n9jypPHJHUADqSuAAAAAACyeQ3kpyXKLmOmrdJaYG2mld3aXGb6+jp79cmu3qinu+xNyG8lOS5Rcx01bpLTA200ru7S4zfX0dPfrk129UU932J+2sBiMbgcPbYjEWlO0sraHMpUqa4JfO2+Lb4tttmm1PU1QXZ0+98vuS06eebGAxGNwOHtsRiLSnaWVtDmUqVNcEvnbfFt8W22zOBX3LXyn4rk6wXPm4XWZuYP4FZKXF9nST7oJ+t8F2tcvTpzrT4Y82ydtJFP8Ahq6rpV73E6NtqsZu2bvbyKe/NnJONNPuai5vzTR5vMzOZS/zeXustlLmdze3dV1a1WXXKT9y7l2IwzuLS3VvRVPwKspcTyCWcl2gs1ygajhisVT5lGG0ru7nHenbw733t9ketvybtOS7QWa5QNRwxWKp8yjDaV3dzjvTt4d772+yPW35N2vcnJ/o/C6I05RwmEt+ZSh41WrLjUrz7Zzfa36kuC4FPUdRjbLhjzk/gZQhxc2OT/R+F0RpyjhMJb8ylDxqtWXGpXn2zm+1v1JcFwJCCNcpGtsJoPTdXM5mtw4xt7eDXSXFTbhCK976kuJyfp1p+LZY5JG6yeUxmLpwqZPI2ljCpLmQlcVo01KXcnJrd+Qy000mnumfnpyk63zevNSVMzmavDjG3t4N9Hb09+EYr3vrbPV/gm6hqZzklt7S4q9JXxNxOzbk95czhOG/kSnzV5Imxu9LlbUVUby+qMI1FJ4LcPCvhI6Xp6V5WMlQtaKpWV8o31vFLZJVN+cl5FNTSXdse6jzZ4b2GUrPTuoYU3vCpUsqs9uD5yU4L/pqDRq3BcqPSXIVFmJ5hAB2BWAAABXGvrfodQSqJbKtTjP09XzFjkL5TKP8iuEvx4P2NfOarWKfFat+DT/j+SSk/SIYADjyyAAAAAADcafwF3l58+P2K2T2lVkvYl2s5aUwkstduVXeNrSf2SS/Cf4qLKo0qdGlGlShGFOC2jGK2SRudN0z8R/Uqd35/YinUxyRgYjC4/GQXweinU241Z8ZP09noNkAdTTpxpx4YLCIG8gAGZ4DCyeLsclT5l3QjN7cJrhKPmZmgxnCM1wyWUe5wVtqPTVzi969Fyr2n4+3jQ+Uvn9xoS5pRjKLjJKUWtmmt00V5rHA/U2t8LtYv4JUe235OXd5u45jUtL7FdrS7vVeH2J4VM8mRwAGjJS5otSipLqa3R9MDT1yrvCWldPduklLzrg/ajPPoVOanFSXUptYBWet6M6WpLhyXCoozi+9bJe9Msw1mew1rl6EYVt4VIfEqR615PKilqVpK5o8Md1zMoS4WVWCRXuj8tQk+gVK5j2OMua/UzU3WLyNtv09jcQS7XB7evqOSqWtal34tFlST2MMAFc9JNo7P22Ktbmjd9I4OSnTUI7vfbZ+5Gfda4guFrYSf6VSe3sX0kKBfp6ncU6apweEjBwi3lkgutX5ituqc6Nuv/bp7+/c1F7f3t618LuqtZJ7pSk2l5l1GMCvUua1XvybMlFLYEj5PPu/L9RL3ojhI+Tz7vy/US96JdP/AFMPM8n3WWIADuSoaPWOPuMnYW9rbRTk7lNt9UVzZcWdmD0/YYuMZRgq1wuurNcd/Iuw3AK34Wk6rrNZfyMuJ4wAAWTEAAA1OcwNjlabdSCp19vFrQXH096K6y+OucZdytrmOz64yXVJd6LbNXqTFU8tjp0dkq0FzqMu6Xd5manUdNjXi5wWJfMkhPHJlWA+zjKE3CScZRezT7GfDkCySfk/yXwbIysakvsdx8XyTXV61w9RYBTVOc6dSNSnJxnFqUWutNdpPsLq6xr0IwyEvg9dLZy5rcJeVbdXpOj0i/hGHY1HjGxDUg85RJwfE00mnunxR9OiIAUwXOUwc5r/APj9v8E9Hqc6NSdGrCrTk4zhJSi12NFsYe9hkcbRu4bePHxl3S7V6ypDfaU1A8ROVGtCVS1qS3aj1wfeilpV4reo1N+izKpHiXIskGHjMlZZKnKpZ1lUUductmmt/OZh10JxmuKLyivsCPakwNTMZO2k6ipW9ODU5LjJ8epIkII69CFeHBPYJtc0YWLxdjjaahaUIwe2zm1vKXnZmgEkIRguGKwhnIABkeA1uYwmPykH8IoqNXsqw4SX0+k2QMKlOFSPDNZR6ngqzP4S7xFbaqukoSfiVYrg/I+5mrLiuqFG6t50K9ONSnNbSi+0rHUmIqYi+6JtyoT40pvtXc/KjlNS038N/Up935FiE+Lkz7pbI/U3MUq0pbUZ+JV+S+30PZ+gtEpkmmmtWUaVtTtMm5RdNc2NZLdNdm6XH0k2j30aWaVR4XQ8qQzzRMwddtWpXFCFehNTpzW8ZLtR2HTpprKK4ItT0rC5zF1fZCe9KdaUoUov4y362/mRKQQ1renXx2izg9UmtjqtrehbUlSt6MKUF1RhHZHaATJJLCPAAD0HxpNbPiiPZ7StlfRlVtFG1uOvxV4kvOuzzokQIa1CnXjw1FlHqbWxUF/Z3Fjcytrqm6dSPY+3yrvRjlqagxFDL2TpTSjVjxpVNuMX9BWF3b1bW5qW9eDhUpy5skchqFhK0ny5xezLMJ8R1AA15mDvsbS4vrmNva0nUqS6kuzyvuR8s7atd3VO2t4OdSo9oos/AYi3xFmqVNKVWXGrU24yf0eQ2Gn2EruXPlFbswnPhNZgtJ2dnGNW+Ubqv17NeJH0dvp9RJIpRioxSSXBJdh9B19C3p0I8NNYKzk3uAATHgOFalSr0pUq1OFSEuDjJbpnMHjWeTBD8/o+EoyuMV4kut0JPg/kvs8zIVVhOlUlTqQlCcXtKMls0y5SO6vwEMjQld20EryC6l/OJdj8vd6jQ6jpMZJ1KKw/D6E0KnRldG40jkvqbmac5y2o1fsdTuSfU/Q/nNQ009mtmj4c7SqSpTU47omaysFzgh2nNW0I20LXKOUJwXNjWS3Ul5duO5LaFWnXowrUpqdOa50ZLtR3FtdUriOYP2dSrKLjudgALJiVNnE3nb5JNt3VRJL5TJHp7SHPjG4yvOinxVBPZ/2n2eY2uFwMKWWvMpdwUqs7ipKjF/grnPaXnfYSE0NnpUXJ1ay3fJfUmlU6I6bW2t7WkqVtRp0oLshHY7gDepJLCITA1DLm4K/f/wC3mvXFoqctLVsubpy9f/t7etpFWnMa8/6sV6v5LFLYH6Bn5+H6BmopdTnv/I/8ft/gAAlOYAAAAAAAAAAAAPN3LP8A7S8t/wDD/gwA5Z/9peW/+H/BgCB7nZ2v9iHkvkR3R9PotN2ce+Ll65N/ObcwsDDmYSxjts1bw38/NRmnd28eGjFeCXyLz3AAJjwAHbZUXc3lC3jvvVqRgtuvi9jx8gfoRyXY6OJ5N9OY+MOY6OMoKa228dwTk/TJtkkONKEKVONOnFRhBKMYrqSXUjkfPZy4pOT6l08UeFplZZHllvbbnqdPHW1C1hs90vF6Rrz86o16CpSWcst07zlY1VX53OX1VuKafeoVHFeyJEzu7SHBQhH1IqSeWwAbTR+P+q+rcPitk/ht/Qt9n1Pn1Ix+cnk1FZZ4e8uSDBR03yZafw/N5tSlZwnWW232Sfjz/wCqTJWAfPZzc5OT6lw8ieGVqiWS13aaZo1H8HxFupVY/wDv1UpP1Q5nrZRJv+UjLSzuv89l5PdXV/WnDjvtDntRXoikjQHdWlFUaEYeCKknlgAFkxAAABZPIbyU5LlFzHTVuktMDbTSu7tLjN9fR09+uTXb1RT3fYm5DeSnJcouY6at0lpgbaaV3dpcZvr6Onv1ya7eqKe77E/bWAxGNwOHtsRiLSnaWVtDmUqVNcEvnbfFt8W22zTanqaoLs6fe+X3JadPPNjAYjG4HD22IxFpTtLK2hzKVKmuCXztvi2+LbbZnAr/AJauU/FcnOD58+Zd5m5i/gVlzuvs6Se3FQT9LfBdrXL06c60+GPNsnbSQ5auU/FcnOD58+Zd5m5i/gVlzuvs6Se3FQT9LfBdrXiDU+dyupc5c5rNXk7u9uZc6pUl2d0UupRS4JLgkNT53K6lzlzms1eTu725lzqlSXZ3RS6lFLgkuCRrTsbCwjax8ZPdlac+IG70Jpu91fq7G6csGo172tzOfJbqnFJynN+RRTfoNIWR4M19TsOWzT9Sqt41p1aHDsc6U4x9rRauJyhSlKO6TMYrLPZHJ/o/C6I05RwmEt+ZSh41WrLjUrz7Zzfa36kuC4EhB13VSdK1q1adJ1Zwg5Rprrk0uC9JwUpSnLMnlsuEe5SNbYTQem6uZzNbhxjb28GukuKm3CEV731JcTwzyk63zevNSVMzmavDjG3t4N9Hb09+EYr3vrbHKTrfN681JUzOZq8OMbe3g30dvT34Rive+tsjJ1+nadG1jxS5yfwK058XJA9GeBBlXDNajwknuq1tSuoru5knF+vpI+pHnMt7wRLydtyzWtCLaV3ZXFGW3alHpPfBE2ow47Wa9Xy5nlN4kj2mVR4WGNWQ5FslW23lY16FzFf21B+yoy1yH8tdor3kj1VRe3i4uvV479dODmv4TkLWXBXhL1osy2Pz+AB3pTAAABGuUWnz8HTn2wrxfoaa+gkpo9cxUtM3L4eLKD/6kvnKl/Hitpr1Myh3kVoADhS2AAADst6U69enQpR506klGK72zrJJyfWar5qVxJbxt4OS+U+C9m5PbUXWqxprqeSeFkm+HsaWNx9K0pdUF40vxpdrMwA7yEVCKjHZFQEd1Dqm2x1SVtbQVxcx4S47Rg/K+1+RHPWuWljccqVCXNuLjeMWuuMe1+fqXpK3bbe74s0uqanKg+ypb9X4ElOGebNzd6mzVxJv4W6UeyNJKKXp6/adVDUOZoy50chWl5J7SXtNWDnXdV288bz5sn4V4E4wesY1akaGThGk3wVaHxfSuzzkuTTSaaafFNFMk85PspK4tp46tNynRXOpt9fM7vQ/eb3S9TnUn2VV58GQ1IJLKJWdN7bUry0q21ePOp1I82SO4HQNKSwyEqDJWlSxvq1pV+PSltv3rsfpXExyXcpFmoXVvfRX2yLpz866vY/YRE4S8odhWlT8C3F5WSXcn2VjSqTxleW0aj51Fv8AG7Y+knJTMZOMlKLaknumnxROdNarpVoQtcpNU6q4RrPhGXn7n7DdaTqMVFUarx4P+CKpDqiWg+JppNNNPimj6dEQgAAGNdWFldb/AAi0oVW+2UE36zVXWk8LW3caFSg3206j9z3RvgQVLajU78U/YeqTWxCb/RFRJysbyMv0KsdvavoI1ksZfY6fNvLedPfql1xfma4FtnCtSp1qUqVanGpTktpRkt0zW3Gi0ZrNP0X8CRVWtymwSvVWl/gkJ3uPTlQXGdLrcF3rvXuIoc1cW1S3nwTRPGSksoEj5PPu/L9RL3ojhI+Tz7vy/US96JdP/Uw8zyfdZYgAO5KgMXJX1rjrZ3F3VUILgu+T7ku1mS2kt29kirtT5WeVyc6ik+gg3GjHuXf531mv1C9VpTyt3sZwjxM3F/ra6nNxsbanSh2SqeNL2cF7TChq/NRnznUoyX4rprb2EfBy8tRuZPLmyxwR8CwMBq2he1Y217Tjb1pPaMk/Ek+7yEnKYLJ0RkpZDEcytJyrW75km+trsfzeg3elalOtLsqu/RkVSGOaN8ADekJW+u7NWuenUgtoXEVU9PU/at/SaAm3KZTTpWVbtUpxfp2fzEJOI1Kmqd1NLz9/MtQeYoAAomZcdD7RT+Svcdh10PtFP5K9x2H0SOyKQKYLnKYOd1//AB+3+Cej1AAOdJib8mf2i++VD3MmBD+TP7RffKh7mTA7XSv0kPb82VaneYAOm8uKVpa1bmtLm06cXKTL7aSyzA6spkLTG2zr3dVQj1RS4uT7kiF5PWV/Wm42MIW1PsbSlN+vh7DS5rJV8pfTuaz2XVCG/CEe4wTk73V6tWTjSeI/FliNNLc2Us7mJS5zyNxv5JbL1GbY6sy9vJdLVhcw7Y1Irf1riaAGvjd14PKm/eZ8K8C0MBnrPLw5tPelcJbypSfHzp9qNuU5b1qtvXhXozlCpB7xkutMtLT2SjlcXTukkp/FqRXZJdf0+k6bTNRdz6FTvL4kFSHDzRsTW6jxscpiqlvsulS51J90l1evqNkDaVKcakHCWzME8FMyTjJxkmmns0+w+G71tZq0z9ZxW0KyVWPp6/amaQ4KtSdKpKD6Mtp5WS09K/e7ZfqkbQ1elfvdsv1SNodzbf2YeS+RUluwAajVWWWJxznDZ3FR82kn39r9H0GdWrGlBzlsgll4Pmf1BZ4ldHLetcNbqlF9XnfYQ6+1ZmLib6OtG3h2RpxXvfE0dWpOrUlUqTlOcnvKTe7bOJyF1qletL0XwrwRZjTSNlDO5iEucsjcb+WW69pt8XrO9oyUb+nC5p9sormzXzMiwK9O9uKbzGbPXFPoW7jb61yNsri0qqcHwffF9zXYzKKq07lauJyEa0W3Rk9qsPxo/Si06c41KcakJKUZJOLXamdXp98ruHPlJblecOFnIiPKHi1Ut4ZOlHx6e0au3bHsfofvJcdN5QhdWlW2qLxKsHB+lE93bq4oypv/AJnkXh5KeBzr0pUa9SjNbTpycZedPY+21KVxc0qEPj1JqEfO3scJwvOOpbJvye4tUrWWTqx+yVd40911RXW/S/cSw6rajC3tqdCmtoU4KMV5EtjtO8taCt6Sprp8ypJ5eQYGZy1pirfpbmb50viU4/Gk/IZN5cU7W1q3NV7QpQcpegqnK39fJX1S6uJbyk+Ed+EV2JFTUr/8LFKPeZlCHEbjI6wylxNq25lrT7FFKUvS38yRrlncwp876o3G/wAvh6jWg5ad5Xm8ym/eTqKXQk2M1jkKE1G8jC6p9r2UZL0rh7Cb4y/tcjaxubWpz4Pg11OL7mu8qI3Gk8pLGZWDlJq3qtQqrfht2S9H0mxsNVqQmoVXmL+BhOmmsos8AHVlcr7X2LVpfxvaMdqVw3zkuyfb6+v1kZLS1ZZq8wNzDbecI9JDzx4+7dekq047V7dUa+VtLn9SzTllAtfTf3Asf1EfcVQWvpv7gWP6iPuLOg/3ZeR5W2NgADqCuACHaq1TKlUnZYya50XtUrdez7o/SV7m6p20OObMoxcnyJTeX1nZx511c0qO/Vz5JN+ZGqq6rwkHsrmdT5NOXzorirUqVqkqlWpKpOT3cpPds4HP1Ndqt+hFJevmTKkupNdS6kxt9hLi1tp1elqc3m7w2XCSb9iZCgDV3V1O5mpz32M4xUVhAtn/AFgNdfkcP/dpf5ypgV02tiKtbUq+O0ingtn/AFgNdfkcP/dpf5x/rAa6/I4f+7S/zlTA945eJD+W2v8ArRbP+sBrr8jh/wC7S/zl18hGsMtrXSN1lcxG2jcUr+dvFUIOMeaqdOS4NvjvNnjs9ReCV/s4yH/F6n+DRM4SbfM1esWdClbOUIJPKLhMXM3FS0xF7dUub0lG3nUjzlut1Ftb+oyjX6l+9zJ/1Or/AAMmOVgsyR5l/wBYDXX5HD/3aX+cf6wGuvyOH/u0v85UwK3HLxO+/LbX/Wi2f9YDXX5HD/3aX+cf6wGuvyOH/u0v85UwHHLxH5ba/wCtEn1JrjNZ/NXGWvoWiuK/N56p02o+LFRWy3fYkCMA8yyxGjTikkuRbuJ+5Vp+oh/CjKMXE/cq0/UQ/hRlH0Gn3F5ED3AAMzwG00fR+Eatw9By5vSX9CG+3VvUijVmx0tVlQ1Niq8JKMqd7Rmm+xqaZjPus9W5+kAAPnhcPzi1fW+EaszFfm83pL+vPbffbepJ7GrNxrqh8F1tnbXo3T6HJXFPmPrjtUktjTn0Kn3UU3uCZch9NVeV7SsW2ksnRlw8kt/mIaS7kWr/AAflb0pU4ccrQhx/Smo/OYXH9qXkz2O6P0DMfJ1522OubmmoudKjOcVLqbSb4mQdV3Qhc2ta2qOShVhKEnHrSa24HArfmWz8022223u31sHKtTnRrTpVFzZwk4yXc11nE+iFIAAAFk8hvJTkuUXMdNW6S0wNtNK7u0uM319HT365NdvVFPd9ibkN5Kclyi5jpq3SWmBtppXd2lxm+vo6e/XJrt6op7vsT9tYDEY3A4e2xGItKdpZW0OZSpU1wS+dt8W3xbbbNNqepqguzp975fclp0882MBiMbgcPbYjEWlO0sraHMpUqa4JfO2+Lb4tttmcCv8Alq5T8Vyc4Pnz5l3mbmL+BWXO6+zpJ7cVBP0t8F2tcvTpzrT4Y82ydtJDlq5T8Vyc4Pnz5l3mbmL+BWXO6+zpJ7cVBP0t8F2teINT53K6lzlzms1eTu725lzqlSXZ3RS6lFLgkuCQ1PncrqXOXOazV5O7vbmXOqVJdndFLqUUuCS4JGtOxsLCNrHxk92Vpz4gADYGAJLyU11bcp+la8pqEYZi0cpPsj00d/ZuRolXI9RnX5V9Jwh1rMWs+rsjVjJ+xEVb+3LPgz1bn6DgBtJNt7JHz8uH5qX0Ywva8YpKKqSSS7FudJ2XdSNW6rVY782c5SW/c2dZ9EWxSBZnguf7ddO//wAr/wD5apWZZ3gtQlLl00+4rdRVy5eRfBqq+dFe8/T1PJ/Iyj3ke4zQcpH+zvUn/Cbr/Bkb8j/KVKMOTnU0pNKKxF2232LoZHDUu+vMts/O4AH0IpAAAA1Gsknpq8TX4MX/ANSNuafWclHTN433RXrkkV7v+xPyfyMo7orAAHBFsAAAE75NaSWOuq+3GdZQ9S3/AO4ghYXJ1t9QZ7bb/CJb+qJtdGSd0vJkdXuklAB2BWMO+xthfVIzu7WnWlFbJy7EY/1v4b+jqPqNoCKVClJ5cU35HuWav638N/R1H1D638N/R1H1G0Bj+Go/sXuQ4n4mr+t/Df0dR9R3WeJx1nW6a1tKdKpttzo9exnA9VvSi8qK9wywACY8I7yg0lU0+57caVWMl7vnK6LN1v8Aexef2P44lZHJa4krlPxS/ksUu6AAaclNhjM1ksdtG2uZKmv5uXjR9T6vQSOy1xwSvbHzypS+Z/SQwFuhf3FDlCXIxcE9yybbVmFrbc6vUot9lSm/m3RtLbI2Fzt8HvLeo32RqJv1FRA2NPXay78U/gYOki5wVFbZC/ttvg95XpJdkajS9Rt7HV2Wt5JVpU7mHapx2frX/ku09doy78WviYOk+hYwNZgM1a5eg5Ud4VYfHpSfFeXyo2ZuadSNSKlB5TI2sHxpNbPiitNY4pYzKN0Y7W9Zc+n3R74+j50WYR3X9sq2BdbbxqE4yT8jez969Rr9Vt1Wt2+sef1M6csMrokfJ5935fqJe9EcJHyefd+X6iXvRzOn/qYeZPPussQAHclQ1eq7l2un7urF7ScOYv7T2+cqwsTlDnzcBGO+3PrxXn4N/MV2cnrk27hR8EWKS5AAGmJQSzk1nJZC6p/gypKT86f/AJZEyVcm33Vuf1H/AHIvaZ+qgYVO6yegA7cqkS5Sv5DafrX7iCk65Sv5DafrX7iCnG6x+rl7PkWafdAANYSFx0PtFP5K9x2HXQ+0U/kr3HYfRI7IpApgucpg53X/APH7f4J6PUAA50mJvyZ/aL75UPcyYEP5M/tF98qHuZMDtdK/SQ9vzZVqd5givKPdSpY2haRe3T1G5eVR7PW16iVEH5S+d8KsvxeZLbz7r/wearNxtZ4/7mKa9IiAAOLLQAAAJbybXLje3No34s6aqLzp7fP7CJEh5P8Af64Vtvt0Ut/YXdOk43UGvExn3WWMADuCoQrlMpLnWVdLi1OD9jXzkNJ1ylfyG0/Wv3EFOM1dJXcvZ8i1T7paelfvdsv1SNoavSv3u2X6pG0Ostv7MPJfIrS3YK417dSr56VHfxLeCgvO1u/ft6CxyqtUc764b7ndfSv1dhrNcm1QSXVklJczWgA5QsAAAAsrQ1y7nT1JSe8qMnSfo4r2NFak+5N9/qRcdfN+EPb9mJt9Fk1c48UyOr3SUgA64rFXavpKjqO8ilwc1P8AaSfzn3R1JVtSWkWuEZOfqi37zu1398tf5MP4UfdBc3646W/XzJ7efY4tQX4/h/8A1/Jaz6BZIAO0Kp1XVCjdUJULimqlOXxovqfaYH1v4b+jqPqNoCOdGnN5lFP2HqbRq/rfw39HUfUPrfw39HUfUbQGH4aj+xe5Difiav638N/R1H1D638N/R1H1G0A/DUf2L3IcT8T5FKMUl1JbI+gE54fJJSi4yW6a2aKduKfRXFSl+JNx9TLjKiy33Vu/wBfP+JnPa+vRg/Mmo9TFLX039wLH9RH3FUFr6b+4Fj+oj7iDQf7svIyrbGwAB1BXNFrTJyx2JcaUubXrvmQa60u1/8A3vK1JJyhXLrZtW6fi0KaW3lfF+zYjZxmrV3VuGukeX1LVNYiAAa0zAAAAAAAAAB6i8Er/ZxkP+L1P8GieXT1F4JX+zjIf8Xqf4NEkp940+ufpH5ouE1+pfvcyf8AU6v8DNga/Uv3uZP+p1f4GTnGw7yPBgAKh9KAAAAAALY09NTwVjJfm8F6kkZ5ptF1el03avtipRfok/mNyd9bS4qMH6l8inLdgAE54DlSnKlVhUj8aElJedHEAH6V2NzSvLKheUXvSr041IPh8WS3XV5zuIhyK5NZjkn0zfb7yeOpUpvfrlTXRyfriyXnz2pDgm4+BdR4C5dbKWP5YNU0Jx5rlkalfbbbhUfSJ+qRCy6PDFxHwDlYjkYrxMnYUqrf6cN6bXqhH1lLnc2c+OhCXqRUmsSYMzB308ZmrHJU21O0uadeO3XvCSkvcYYLDWVhmJ+l1CrTr0KdejNTp1IqcJLqkmt0zmQDwetQR1HyRYK6dRSr2tD4FXXbGVLxFv5XFRl/aJ+fP6tN05uD6MuJ5R+fvLRhXgOVTUeM6Po6cb6dWlHbgqdR9JDb+zJEQPSPhqaTnTvsVrO2pPo6sPgN20uqa3lTk/Ouct/0UebjtrGsq1CMvUVZrDBZPIbyU5LlFzHTVuktMDbTSu7tLjN9fR09+uTXb1RT3fYm5DeSnJcouY6at0lpgbaaV3dpcZvr6Onv1ya7eqKe77E/bWAxGNwOHtsRiLSnaWVtDmUqVNcEvnbfFt8W22yjqepqguzp975fczp0882MBiMbgcPbYjEWlO0sraHMpUqa4JfO2+Lb4tttmcCv+WrlPxXJzg+fPmXeZuYv4FZc7r7OkntxUE/S3wXa1y9OnOtPhjzbJ20kOWrlPxXJzg+fPmXeZuYv4FZc7r7OkntxUE/S3wXa14g1PncrqXOXOazV5O7vbmXOqVJdndFLqUUuCS4JDU+dyupc5c5rNXk7u9uZc6pUl2d0UupRS4JLgka07GwsI2sfGT3ZWnPiAANgYAAAAtrwTcLLK8sVldOHOo4y3q3dTfq35vRx9POqJ+gqU9deBvpOeJ0VeamuqTjXzFVRoc5cVQp7pNd3Ok5eiMWa/U6ypW0vF8veZ01mRe5H+UnJww/J9qDJzmofB8dXnF98+Y1FemWy9JICmPDA1BHFclixMJ7V8vdQo83t6OD6ST9cYL+0cla0u1rRh4ssyeFk8agA70pguXwPLCV3yvK5Ud42WPrVm9urfm0/+/3lNHpjwH8T42pM7OD4KjaUpdn4U5r/AAyjqU+C1m/Z7zOmsyPTJCuXa9dhyPaprqXN52PqUd+H859j7flE1Kf8LzKfAOR2vaKW0sje0Lbbt2TdV/4ZyFpDjrwj60WZPCZ4uAB3pTAAABotdz5um68d/jygv+pP5jekX5R6nNw9Cl2zrp+hJ/Sinfy4bab9RlDvIgAAOGLYAAAJ1ya1k7C7ob8YVVP1rb/tIKSLQF4rbN9BN7RuIOH9pcV869Jf0yqqd1Fvry95hUWYligA7YqkS1nl8ri7+krWtGNCrT3W9NPxk+PX6PWaL67M3+cw/dR+gmeq8V9VcXKnT+303z6XlfavT9BWM4yhOUJxcZRezTWzT7jltUnc0KzcZvhe3MsU1Fo3f12Zv85h+6j9A+uzN/nMP3UfoNEDW/jbj/Y/ezPhj4G9+uzN/nMP3UfoH12Zv85h+6j9BojeaUwUsvXnOs5wtaa2lOPBuXYlv6//APSSjXu601CE3l+tnjUUstH367M3+cw/dR+gfXZm/wA5h+6j9Bt7rQ64u1v2u6NSHzr6DU3WkszQ3cKVOul205r3PYtVKWpU93L2PPyPE4Mx7/UOVvrSdrc14ypT25yVNLqafvRrra3r3NVUrejUrTfHmwi2/Ycru0urOoqd1b1aMn1KcWt/N3my0Zcq21FbOT2jUbpv0rh7diiuOtWjGs34c+hlyS5HK10rmq/F20aK76k0vYuJtbXQ9V7O6v4R71Tg37Xt7ibg6Wno1tDfL839MEDqyIytG4yFtUjGVepVcGoSnPgpbcHstiATjKE5QmmpRezT7GXKQXXWDnTrzylrBypT41opfFf43mfvKmq6dGNNToxxjcypz54ZEgAc2TgAAG50ZXnQ1Ha81vao3CS7019Oz9BZxX/J/jqlfJ/D5Rao0E9n+NJrbb0J7+osA63RISjbty6vkV6r9IGr1Wk9O3u63+x/OjaGk1vWVHTlwt9nUcYR8u7W/sTNhdtKhNvwfyMI7orMkfJ5935fqJe9EcJHyefd+X6iXvRx2n/qYeZZn3WWIADuSoRjlH+4dH+sx/hkV+WByj/cOj/WY/wyK/OP1n9U/JFml3QADVEgJVybfdW5/Uf9yIqSrk2+6tz+o/7kXtN/VQ8zCfdZPQAduVSJcpX8htP1r9xBSdcpX8htP1r9xBTjdY/Vy9nyLNPugAGsJC46H2in8le47DrofaKfyV7jsPokdkUgUwXOUwc7r/8Aj9v8E9HqAAc6TE35M/tF98qHuZMCH8mf2i++VD3MmB2ulfpIe35sq1O8wRflFtJVsXRuopt0Km0vJGXDf1pEoOu5o07i3qUK0edTqRcZLvTLF1Q7ejKn4nkXh5KcBsc9iq+JvpUKqbpvjSqdkl9Pea44WpTlTk4yWGi0nkAAwPQS/k2tW7q6vGvFjBU0+9t7v3L1kWs7avd3MLe3pupUm9kkWlgsdTxeNp2kGpSXGcvxpPrf/wB7jcaPbSqVu0e0fmR1ZYWDPAB1pWIVymVU6llQXWlOb9OyXuZDTc6zvFeZ+u4veFLalF+br9u5pjhtQqqrczkvH5ci3BYii09K/e7ZfqkbQ1elfvdsv1SNodlbf2YeS+RVluwV1r+0lQzjuNvEuIKSflXBr2J+ksU1epsVHLY2VFbRrQfOpSfY+7zMr6lbO4oOMd1zRlCXCyrAdlxRq29edGtCVOpB7Si+tM6zimmnhloAA8ALL0Rau209RcltKs3Va8/V7EiFaZw9XLX8Y81q3g06s/J3Lyss+EYwgoRSjGK2SXYjodDtpZdZ7bIhqy6HIA6L64haWda5qfEpQcn5duw6NtRWWQFaatqqtqO9muypzP2Uo/MctH1lR1HZyb4Sk4etNL2s1dapKrVnVm95Tk5SflYt6s6FenWpvadOSlF+VPc4NV//AJHa+vPxyW8csFyA6bOvC6taVzTfiVYKS9KO47xNNZRUNZqeveWuGrXNlNRq0tpPeKe8d+PX6/QQj67M3+cw/dR+gsirCFWnKnUipQmnGSfan1lV6gxdXFZCdvNN0296U/xo/T3mi1l16TVSnJpbPDJqWHyZmfXZm/zmH7qP0D67M3+cw/dR+g0QNF+NuP8AY/eyXhj4G9+uzN/nMP3UfoH12Zv85h+6j9BojvsbWte3dO2t4c6pUeyXzvyHsby5k8Kb97HDHwNt9dmb/OYfuo/QPrszf5zD91H6De1dEWrpRVK9rQqbLnOUVJN+RcDV3Wi8nT3dCrb113c5xft4e0v1KGpQ6t+TME4Mxvrszf5zD91H6DS1qk61adWo95zk5SflfEzL7D5Syg53NlVhCPXJLnRXpXAwDW16leT4azftySJLoC19N/cCx/UR9xVBa+m/uBY/qI+42ug/3ZeRHW2NgADqCuVXqmbqahvZPsquPq4fMawzc993L/8ArNT+JmEfP67zVk/Wy4tgACI9AAAAAAAAAB6Y8FXJY6z5Pb+ld39rbzeWqSUataMW10VHjs31cGeZwZRlwvJUvbRXdLs28HvP6uYX+mMf/eYfSYGo81hpaeyUY5awlJ2lVJK5g23zH5Tw2DPtfUaeP/j0U89p8PuAARHRgAAAAAE+5OK3PxNeg3xp1t/Q0vnTJSQLk3uOZkri2b4VaSkvPF/Q2T07TSqnHax9XIq1FiQABsTAAAA9geBnnFf8m13hpzbq4u+kox7qVVc+P/V0heJ428EDUiw/KdLEVqnNoZm2lRW72XSw8eD9SmvPJHsk4zVaPZ3MvXz/AO9papvMSg/DT0+73RWL1DShvPGXTpVWl1UqqS3b8kowX9o8lH6L65wFDVOj8rp642UL62nSUn+BPbeEvRJJ+g/O/I2dzj7+4sLylKjc21WVKtTl1wnF7NPzNG40Svx0XTe8fkyKqueToABuyI9CeBhq5WWoMho66qbUsjH4VaJvgq0F46XllBJ//GerT82sHk73C5i0y2OrOjd2laNajNdkovdejyH6Bcm2rbDW+jrHUNg4pV4c2vS33dGqvjwfmfV3pp9py2tWrhUVZbPfzLFKWVgydc6bsdXaTyGncivsF5ScOftu6c1xhNeWMkn6DyNyc8hepM7rq9w+coVsdjMVcdHfXXN26XtUaW/xnKLT36kmm+tJ+0wULa/q20JQh1+BnKCluYOAxGNwOHtsRiLSnaWVtDmUqVNcEvnbfFt8W22zOBX/AC1cp+K5OcHz58y7zNzF/ArLndfZ0k9uKgn6W+C7Wq1OnOtPhjzbPW0kOWrlPxXJzg+fPmXeZuYv4FZc7r7OkntxUE/S3wXa14g1PncrqXOXOazV5O7vbmXOqVJdndFLqUUuCS4JDU+dyupc5c5rNXk7u9uZc6pUl2d0UupRS4JLgka07GwsI2sfGT3ZWnPiAANgYAAAAAz9PYbJ6gzNth8PZ1Lu+uZ8ylSguLfe+xJLi2+CS3Z42kssG85KNF3uvNa2eBtVOFGT6S8rxW/QUU1zpefikvK0e/sZZWuNx1tjrKjGja2tKNGjTj1QhFJJepEK5E+Tiw5OtLqzi4XGVulGpkLpL489uEI9vMju0u/i+G+ynpx2p3v4mpiPdW31LUI8KB4p8KvV8NTcptWwtaqnY4WDtINPhKrvvVl+1tH+weluXrXtPQOg7i9o1I/VW83t8fB7b9I1xnt3QXHz81dp4PnKU5ynOTlKT3lJvdt95e0O1bbry8l/JhVl0PgAOkIAe5PBi0/LT/I9ilWg4V8i5X9VP/3NuY/3cYHjnk905X1brXE6et1Le9uIwqSiuMKa4zl6IqT9B+h9rQo2ttStrenGlRowVOnCK4RilskvMjn9dr4jGkuvMmpLqdh5f8N7NqeR09p2nLjSpVL2st+vnNQh/BP1nqA8Ecvmo46o5WM5kKU1O2pV/gtu0904UlzN15G05f2ijotHjuOL9q+xnVeIkFAB1xWAAABCOUusncWdunxjCU2vO0l7mTcrPW9x8I1FXSe8aSjTXoW79rZqdZqcNs14tfX+CSkvSNIADkCyAAADnRqTo1YVacnGcJKUWuxo4AJ4BbOEyFPJ42ldU2t2tpx/Fl2ozir9MZmpiLznSTnb1OFWC968qLLta9G6t4V6FSNSnNbxku07TTr6N1T595b/AFKs4cLO00OodNWuUbr05fB7n8dLhLzr5zfAuVqMK0eCayjFNrYrO70tmrebStVWj2SpyTT9HX7Dphp3NTlssfVT8rS97LSBqXoVBvlJ/D6Enasg2J0XXlUjPJVo04Li6dN7yfkb6l7SaWtvRtbeFC3pxp04LaMYo7QbG2sqNsv6a9vUwlJy3B8lKMYuUmlFLdt9iPpCtb6gjOM8XZVN11V6i7f0V8/q7z27uoW1Nzl7PWIxcng0Gpsk8plqleLfRR8Skv0V2+nrNbCUoTjODcZRe6a7GfAcNUqSqTc5bstJYWC2MBkYZPF0rqLXPa5tRL8GS6/p9JnlXaazNXD3nP2c7epwqw7/ACryosuzuaF5bQuLapGpTmt01/8Aes7HTr6NzTw36S3+pWnDhZ3HxpNbNbpn0GxMCN5bSGPu5OpaydpUfFqK3g/R2eg0VfReUg30Va2qrs8Zp+4sEGuraVbVXlxw/UZqpJFdU9HZiT2l8Gh5ZVPoRtsbomlCanf3TqpfzdNbJ+nr9xLwYU9ItYPOM+Z66kmddvQo29CNGhTjTpwW0YxWyR2AGzSSWERggvKLkFVuaWOpy3VHx6m34z6l6F7yRamzdHEWrSandTX2On3eV+T3lZ1qlStWnVqzc6k5OUpPrbZodZvUodhF83uTUo9TgSPk8+78v1EveiP0EnWgmt05L3lt29hY21TpLezt6M9tudTpRi9vOka/SbV1qvaJ91ozqSwsGSADrysRjlH+4dH+sx/hkV+XFc29vcwVO5oUq0E91GpBSSffxK813b0LbNxp29GnRh0MXzacVFb7vsRzWtWjz2+eXJE9KXQ0AAOfJgSrk2+6tz+o/wC5EexkYzyVrCcVKMq0E01umuci1rays7abnbWlvRk1s3TpqLa9BuNHtXUqdqn3WRVJYWDIAB1pXIlylfyG0/Wv3EFLhubW2uoqNzb0a6i90qkFLb1lb60o0bfUFalQpU6VNRjtGEVFLxV2I5jWbRxk6+eTwvgT0pdDTAE+0RYWNxgo1Liytq0+kkudOlGT9bRq7O1d1U4E8EkpcKySWh9op/JXuOw+JJLZLZI+ndJYRUBTBc5Ftb2Fjb4KVS3srajPpIrnQpRi/WkajWLV1qamn3c/wS05YeCAgA5IsE35M/tF98qHuZMCH8mf2i++VD3MmB2ulfpIe35sq1O8wADYGBj39nbX1u7e6pRqU32Psfen2Mh2T0VXjJzx9xGpDshV4SXp6n7CcgqXNlRue+ufj1MoycdisZaYzinzfgLflVSO3vM2x0bkqsk7qdK2h28edL1Lh7SwQUo6JbReW2/b9jPtZGtwmGssTTat4OVSS2lVnxk/oXkNkAbWnTjTjwwWERt5BqtT5OOLxc6ya6afiUl+l3+jrM6+u6FlazubmoqdOC4t9vkXlKw1Bla2Xv3XnvGnHxaUPxY/Sa/U75W1Phi/Se31M4Q4ma9tt7t7tnwA40slp6V+92y/VI2hq9K/e7ZfqkbQ762/sw8l8inLdgAE54avOYSxy0F08XCrFbRqw+MvJ5URG+0blKMn8GlSuYdm0ubL1Ph7SwgUbnTqFw+KSw/FGcZuJWMNL5yUtvgLW3a6kUvebfGaKqykp5G4jCH4lLi36X1e0m4K9PRbaDy8vzPXVkzosrS3sreNva0o0qcepL3vvZ3gG1jFRWFsRgh3KHlFGnHFUpeNLadbbsXYvn9Ru9SZqjiLRveM7ma+xU/nfkKyuK1W4rzr1pudScnKUn2s0esXyhDsYPm9/UvuS04ZeTrABy5YJxye5RToSxdWXjw3nR37Y9q9D4+nyEvKctq9W2uIV6M3CpTlzoyXYyzdN5qhl7RNNQuIL7LT7vKvIdTpF8pwVGb5rb1r7FepDDybYxMrjrXJ2rt7qnzo9cWuDi+9MywbqUIzTjJZRGV7ktHZGhNys5QuqfYt1GXqfD2mu+t/Nb7fU+t7C0waieiW8nlNokVVlc2OkMtXmunjTtodrnJN+pEywWEs8RSaopzrSXj1ZLi/J5F5DaAtWum0LZ8UVl+LMZTcgAanUeaoYi15z2ncTX2Kn3+V+Qt1asaUHObwkYpZ5Gk5Q8oo0oYqlLxpbTrbdi7F8/oRCTsua1W5uJ1603OpUlzpSfazrOIvLl3NV1H7PItRjwrALX039wLH9RH3EY5PbO0uqN47m1oV3GUOb0lNS24Pq3JrThClTjTpwjCEVtGMVskvIje6LauEe2zykv5Iqss8jkADfEJUue+7l/8A1mp/EzCLN1Hj7BYi+uFY2yrdFOXSdFHnc7br3233KyOJ1C0dtU5vOeZahLiQABQMwAAAAAAAAAAAAAAAAAAAAAAADYacuvgectK7e0VUUZeZ8H7y1ymC2NP3iv8AD21zvvJwSn8pcH7UdHoNbvUn5/X+CGsupngA6IgAAAMzB5K6w2ZsstY1HTurOvCvSl3SjJNe4/RLSmbs9R6ax2dsJJ299bwrQW+/N3XGL8qe6flTPzhPUHgZ636W0vNC31bx6POu8fzn+A39kprzN85LyyfYaXWrbtKSqLePyJaUsPB6RPIHhfaJlhdaU9VWdDm2GYX2ZxXCFzFeNv8AKilLytSPX5G+UzSVlrfRd/p682g68OdQrNbujWjxhNeZ9e3Wm12mhsLr8NWU+mz8iaceJYPzyBm57FX+DzN3h8nbyt720qypVqb7JJ+1dqfauJhHbpprKKgPQ/gXw1dDOZGpaUv/AMr1IbXk6u6j06XidF3z4+N2c18ePNIDyG8lOS5Rcx01bpLTA200ru7S4zfX0dPfrk129UU932J+2sBiMbgcPbYjEWlO0sraHMpUqa4JfO2+Lb4tttmj1e+hGDoLm3v6vuTU4PczgAcuTmNlHfLG3LxkLed8qUvg8biTVJ1NvF5zXHm77b7cTwJysWWtbbWV5X13QuoZW4m5upVXiVI9S6NrxXBdS5vBbbH6CGu1FgsPqLGTxucxttkLSfF0q8FJJ967U/KuJsNPvlaSbcc595hOPEj83werdbeDDhLydS50nma2Lm+MbW6i61LfuU/jRXn5zKmz/g/8puLnPocRb5OlH+csrqEt/NGXNl7DpqOpW1VcpY8+RA6ckVWCV3HJryhUJc2eidQt77fY8fVmv+lM52nJjyiXUkqeis9Fv8rZTp/xJFrt6W/EveY8LIiC39O+DpykZOcHe2tjh6Ukm5XV1GT2+TT5z38j2Lf0L4Nek8RKFzqW8r564jx6LZ0LdP5KfOls++ST7UVK2qW1Jd7L9XP7GSpyZ5t5OOTzVGvcirbBWEnbxklXvKqcaFHzy7X+it35D2RyQcl2B5OsY42cVeZWtHa6yFSCU5/oxX4EN+zt4bt7Laa46ys8bZUrHH2lC0taMebTo0aahCC7lFcEZBzt7qdS59Fco+H1J4wUQYGocxjdP4W6zGXuoWtla03Uq1JvqXcu9t8EuttpDUGZxen8RcZfMXtKzsrePOqVaj2S8i7W31JLi3wR4s5d+VrIcoeU+B2fS2enrae9tbN7Sqy/K1NuuXcuqK8u7cVjYzup+EVuz2UlFGi5Yde3/KFq+tl7hSo2dPelY22/CjST4b/pPrb7/IkQ0A7SnTjTioRXJFVvPMAEg5OtKX+tdYWGnsemp3E96tXbdUaS4zm/MvW9l2ns5KEXKWyCWS/vAx0VKlQvtc31DZ1U7THOS/BT+yzXnaUU/JNHpMwdPYmxwODs8NjKKo2dnRjRpR8iXW+9vrb7W2Zxwt3cO4rOo/8AkWorCwQvlt1XHRvJrlsxCr0d3Kk7ey2ez6efCLXyeMvNFngJ8Xuy9PC/1v8AVrWFHSdlW51jh+NfmvhO5kuPn5kfF8jc0UWdPpFt2NDie8uf0IKsssAA2pGAAAcK9SFGjOtUe0IRcpPyJblQXVaVxc1bifxqk3N+dvcsTXN58FwNSnF7TuGqa83W/YtvSVscxrtbiqRprpz95PSXLIABoSYAAAAAAGzwWbvMRV3oy59GT8elJ+K/oflNYDOnUnTkpQeGeNZ3LPw+osbkkoxqqjWfXSqPZ7+R9TNwUwbCyzOUs0lb31aMV1Rb50V6HujfUNdaWKsfavoROl4FrgrmnrHMRW0nbz8sqf0M5T1ll5b7Rto791N8PWy7+d23r9xh2UixDEyORssfT593cQpLsTfjPzLrZXN1qPNXCalfTgn2U0oe1cTVznKc3OcpSk+tt7tlatrscYpR95kqXiSXUOrK95GVtYKVvQfCU38ea+ZEYANDXuKlxLiqPJMopbAAEB6DPw+WvcVW6S1qbRb8anLjGXnXzmADKE5U5cUXhhrJY2J1ZjbxKFy/glXum/Ff9r6djf05wqQU6c4zi+pxe6ZTR3Wt3dWsudbXFWi+3mTa39RvKGuVIrFWOfXsQukuhcIKyoapzdJbfC1UXdOEX7dtzKjrPLpreFrLz03x9pfjrds9017DHspFhgrqWscw1slbR8qp/wDkxLjUmarpqV9OC/8AbSj7UtzyWuW62Tf/AHmOykWVd3VtaU+kua9OjHvnJIiub1lTipUcXBzl1dNNbJeZdvpIXVq1K03OrUnUm+uUpbs4Gtudaq1FimuFfEzjSS3Oy4r1rivKtXqSqVJveUpPds6wDTNtvLJTnQ+30/lL3lyFMHPpqv5Wf7TNjp+oKzUvRznHUwnDiLkBTfTVfys/2mOmq/lZ/tM2X5+v9fx+xH2PrLkK75Q/u/H9RH3sj/TVfys/2mcZSlJ7yk2/Kynfaqrql2fDj2/YzhT4Xk+AA05IZWJ+6tp+vh/Ei3SmE2nuuDOfTVfys/2mbPT9RVpGS4c59ZHOHEXICm+mq/lZ/tMdNV/Kz/aZsfz9f6/j9jDsfWXIVrrv75a/yYfwo0vTVfys/wBpnGUnJ7ybb72ylfaorqnwcOOed/sZwp8LyfCx9Afe7D9bIrg5RqVIraM5JdyZUsbv8LV48Z5GU48SwXKCm+mq/lZ/tMdNV/Kz/aZuPz9f6/j9iLsfWXIR/X/3uz/WxK76ar+Vn+0z5KpUktpTk13NkNfWlVpShwYyvH7HqpYecnEAGhJib8mf2i++VD3MmBD+TP7RffKh7mTA7XSv0kPb82VaneYI3qjOXGHydtzIxq0J026lN8N+PWn2MkhBeUr+XWn6p+8anVnSt3ODw1j5imk5cyT4nOY3JRSoV1Gq/wCanwl/59BsymDZWedy9olGjf1eauqM3z0vXuayhrvLFWPu+hI6XgWqCuoaxzEY7N2833un9DPtTWWYknzVbQ3/ABab4etsufndt6/cYdlIsQ02Z1HjsapQdRV66/mqb32flfUiBX2byt6nG4vari+uMXzU/QtjXFK411tYoxx639DNUvE2Gby93lrjpLiW0I/Epx+LH/z5TXgGhnUlUk5SeWyVLAABgelp6V+92y/VI2hq9K/e7ZfqkbQ762/sw8l8inLdgiK1VKyzN3Z30HUoQrSjCcF40Fv1Ndq/+8SXFUak+799+vl7yhq1xUt4wnTeOZnTinuWdY3tpfUuktLinWj2818V511oySm6VSpSmqlKpOnNdUovZo2ttqbNUEkr2VSK7KkVL2viVaOuwa/qR9xk6T6FngryOs8uuuFrLh2039J11tX5qpHaNSjS8sKa+fcsvW7ZLr7jHspFi1Jwpwc6k4wilu5SeyRGM7q+2t4yo47a4rdXSP4kfp9xCr2/vb2W91dVa3cpS4LzLqRjGuudbnNcNJY9fUkjSS3O27uK91cTuLipKpUm95SZ1AGjbbeWSgAHgB22txXtbiFe3qSp1YPeMonUD1Np5QJ5g9YW9dRo5JKhV6ukS8SXn7vcSilUp1qaqUqkKkH1Si90/SU2d9peXVpPn2txVovt5kmt/Obu21upBcNVcXr6kUqSexcAK1oaszVJbSr06q/Tpr5tjv8Arzy+23MtfP0b+k2K1u2a6+4w7KRYZwq1KdKm6lWpGnBdcpPZL0lb19V5uqmlcQpJ/iU18+5qru7urufOurirWa6ufJvYiq67SS9CLfnyPVSfUm2c1ha28ZUsalcVerpGvEj9PuIReXNe7uJXFzVlUqSfGTOkGiur2rdP03y8OhLGKjsAAVDIm/Jn9ovvlQ9zJgU1Gc4/FnKO/c9j701X8rP9pm7tNYVvRVPgzj1/YilTy85LkBTfTVfys/2mOmq/lZ/tMs/n6/1/H7GPY+stTUn3Avv1EvcVQc3VqNbOpNp/pHA1V/e/i5qXDjBJCPCAAUDMAAAAAAAAAAAAAAAAAAAAAAAAEz5N77Z3GOnLr+y0/dJe72kMMrE3k8fkaF5DdunPdpdq7V6ty1ZXH4evGfTr5GMllYLdBwo1IVqMKtOSlCcVKL70zmd0nnmioAAegG00lnb/AExqSwz2Mqcy7sqyqw4vaS7Yvb8GS3T8jZqweSipLD2B+jGidSY7VulrDUGLnzra7pqXNb405dUoPyxaa9BuTxp4L/KbHR2oZafzNxzMFk6i8ecvFta/Up+SMuEZf2X2M9lpppNPdM4i/tHa1XHo9i3CXEilfCK5GquuqlPUGnZW9HOUqfR1qVV8yN3BfF8bsmupN8Gtk2tkVNoPwcdZ5DOUo6roU8Ni6ct60o3NOrVqRX4MFBySb75bbdez6n7DBJR1S4pUuzi+XxR44JvJg4DEY3A4e2xGItKdpZW0OZSpU1wS+dt8W3xbbbM4Ff8ALVyn4rk5wfPnzLvM3MX8Csud19nST24qCfpb4LtapU6c60+GPNsybSQ5auU/FcnOD58+Zd5m5i/gVlzuvs6Se3FQT9LfBdrXmrQfL7rTA6iub7MXU85Y3tbpLm1rS25jfbSf4Gy4c34vk7StdT53K6lzlzms1eTu725lzqlSXZ3RS6lFLgkuCRrTrbXS6VKlwzWW9/sV5VG3yP0F5POUPSuu7Hp8DkoTrxjzq1nV2hXpfKh2rj8ZbryksPzUsLy7sLyleWNzWtbmlLnU6tGbhOD701xRcuhPCP1lg6dO1z1ChqG1ikudVfRXCX6xJp/2otvvNZc6JOLzReV4PckjVXU9jAqDS/hE8neXhGOQubzCV2uMbug5Q37lOnzlt5XsWDidaaQy0Iyxup8Ndc7qjTvabl6VvuvSaipbVqXfi0SJp7G+B8i1KKlFpprdNdTONarSo0pVa1SFOnHrlOSSXpZAenMEZzPKBofD03PI6sw1Fr8BXcJT/Zi3J+ornVfhKaGxkJwwtC/zldfFcKboUn55TXO9UWWKVpXq9yLZ45Jbl2Fe8qPK9pLQVGpQurpZDLJeJj7aadRPbhz31U11dfHjwTPNGveX3Xep4ztrK5hgbGXDorBtVJL9Kq/G/Z5q8hVE5SnOU5ycpSe8pN7tvvNza6G88Vd+xfUilV8CYcqHKPqTlByauczcKnaUm/g1lR3VGiu/b8KXfJ8fMuBDgDoadONOKjBYRC3ncAAzPDlThOrUjTpwlOc2oxjFbtt9SSPbPg48mS0Hph32TpR+r+SipXL23dvT640U/bLvfDjzUyE+DByPSx6t9captXG7a5+Ns6sdnRXZWkvxn+Cn1dfXtt6MOY1fUFUfY03y6linDHNghnLNri30DoW7zMpQlezXQ2FKX85WkuHDujxk/Itu1Euu7ihZ2la7uq0KNvQpyqVak3tGEYrdyb7Ektzwry9codblB1nO5oSnHD2W9HH0pcPF341GvxpNb+RJLsKWm2buavPurf6GU5cKIFeXNe8u613dVZ1rivUlUq1JveU5Se7bfe2zqAO0KoAAAAMTLXkMfjq13U22px3S732L1mMpKMXJ7I9IPygX3wnLq1g94W0eb/afF/MvQRs51qk61adWpJynOTlJ97ZwOCuazr1ZVH1LcVhYAAIT0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHKlTnVmqdOEpzfVGK3bOJt9H/fLZ/Kf8LJKMO0qRh4tI8bwskk5OrevQo3ir0KtJuUNufBx34PvJYAd1bUFb0lTTzgqyeXkEK5Q7a5r3tq6FvVqpU2m4QctuPkJqDG7tlc0nTbxkRlwvJTU4SpzcJxlGUXs01s0cTYak+799+vl7zXnDVI8E3HwLS5oAAwPQAAAAAAdtC3uLjndBQq1eb18yDlt6jqJnyZf/qH/AMX/AHlmzt1cVo028Z+hjJ8KySLTMJ08BZwqQlCSp7OMls0bIA7mnDggo+CKreWCr9R2d28zfVla1+j6Wcuf0b5u2/Xv3FoGFnvuHf8A9WqfwspajaK5p83jHMyhLhZUoAOKLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABPOT7J9PZyx1WX2Sh41Pftg/ofvRKyocXe1cff0ruj8anLfbvXavUWxZXNK8tKV1QlzqdSPOizrdHu+1pdnLePyK9SOHk7gAbgiAAABdPI3y+ZjSFtRwuoaFXMYamlClJT/wDUW0V2Rb4Sil1Re3kaXApYENe3p148NRZR6pNbHvTTfLFyb52lCVvqqxtakkm6V9L4NKL7vH2TfmbNtf8AKFoSxoOtc6xwMYpb7Rv6cpPzRTbfoR+eoNQ9BpZ5SeCXtn4HrPlI8JTAY63qWei7eeWvWmld1oSp29N96T2lN9fDaK6uLPLupM5ldR5m4zGavat5e3Et6lWo/UkupJLgkuCNcDZWtlRtl6C5+PUjlNy3AALZiAAAAbvSGmr7Ul86Nv8AYqEONavJbxgvnfkLGXJdgfg/Md3f9Lt9s58evzc3qKde+o0JcMnzKVxqFChLhm+ZUNKtWo79FVqU9+vmya3PlWpUqy51WpKcureT3ZudZacutN5JW1aaq0aicqNZLZTXbuuxrtXlRpCzCcakVOOzLVOpGpFSi8pgAGZmAAAACQ6F0XqTWuVWP09jalzJNdLVfi0qK75z6l5ut9iZjKcYLik8I9SyaClTqVasKVKEqlSclGMYrdyb6kl2s9R+D9yELHyt9U64tVK7i1Us8bNbqi+ydVdsupqPZ28eCm/IzyK4HQUYZK8dPLZ5r+VTh4lDvVKL6vlPi/Im0Wqc1qGruonTo7eJPCnjmwAeb/CQ5badvSudHaOu4VK806eQyFKW6pp8HSptdcuxy7OpcerU21tO5nwQ/wDRJKSiss0nhS8rcctWraH03c86wpT2yVzTlwrzT+1Rf4sWuL7Xw6lx88gHa21tC3pqECrKTk8gAFgxAAABBuUPJ9JcQxlKXi0vHq7dsuxehe8lWdyNPF42pdT2cktqcX+FJ9SKqrVZ1q061WTlOcnKTfa2aLWrvgh2Md3v5fclpRy8nAAHLlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGy0xXo22eta9eoqdOEm5SfUvFZrQZ05unNTXR5PGsrBaf1wYb+kaPrH1wYb+kaPrKsBufz2t+1fEj7JFp/XBhv6Ro+sfXBhv6Ro+sqwD89rftXxHZIzc7Vp18zeVqU1OnOtJxkuprcwgDSzlxycn1JVyAAMQAAAAAACVaAyFlY/DfhdxCjz+j5vO7dudv70RUE9tXlb1VUiuaPJLKwWn9cGG/pGj6x9cGG/pGj6yrAbX89rftXxI+yRaf1wYb+kaPrMXMZzE1cReUqd/RlOdCcYxT624vZFbAxlrlaUWuFc/MdkgADSkoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJToPMq1uPqdcT2o1pfY2/wAGfd5n7yLBNp7rgye2uJW9RVI9DySysFzgj2jc2slafBrif/q6K47/AIcfxvP3khO4oVoV6anDZlRrDwwACY8AAAAAAAAAAAABvNHaavNR5DoaO9O2ptOvXa4QXcu9vsQ0dpq81HkOho707am069drhBdy72+xF6YbGWeIx9OxsaSp0aa9Mn2tvtbNZf36oLgh3vkarUdRVuuCHe+Qw2Ms8Rj6djY0lTo016ZPtbfa2ZgNRqvUFlp3Gu6upc6pLdUaKfjVJfMu99hziU6s8Lm2cxGM6s8Lm2RDlyq0VjsbRe3TutKUe9RS2ftaKpM/P5e9zeSqX99U51SXCMV8WEeyKXYiWaV5IOUTU2OhkcXpyt8EqLenVuKsKCmuxxU5JteVLbynU28Y2lBRqSSOysbaVCiqb5sggLoxng1col0//VVcNYR7emupSfo5kZEywPgrwXNnntWyfHxqVla7cPJOb/7TGep2sN5+7mXVTkzzKb/SGi9VatuFR09g7y+XO5sqsIbUoP8ASqPaMfSz2RpTkN5N9PSjVjg1k7iL3VXIz6b/AKOEP+kse3o0bejChQpQpUoLmwhCKjGK7kl1Gur67FcqUc+ZmqXieceTjwZbejKne65yKuZLaXwCyk1DzTqcG+5qKXkkz0HgsRi8FjKWMw9hb2NnSW0KNCCjFeXh1t9rfF9pnA0dxd1rh5qP6EqilsDqu7m3s7WrdXdelb29KLnUq1ZqMIRXW23wS8pD+UvlO0poG1bzF70t9KPOpWFvtOvPubW/iryy2XXtv1HkXla5W9TcoNxKhc1PgGHjLelj6E3zPI6j/Dl5+C7EixZ6bVuXnaPj9DyU1EsPl45fKuWhX03oetUoWEt4XOSW8alddTjT7Yw75db8i6/PQB1ltbU7eHBBFeUnJ8wACwYgAAA+NpJttJLrbPpENd5xU4SxVrPx5L7PJdi/F877SvdXMLem6kjKMeJ4NFq/MPKZDm0pP4NR3jT/AEn2y9JpADh61WVabnLdlpLCwAARHoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB3WdzWtLqnc283CpTe8WiztPZehl7JVYbRrR4Vae/GL+gqsy8Vf3ONvI3VtPaS4NPqku5+Q2On38rWfPuvf6mE4cSLcBr8HlbbLWar0HtJcKlNvjB/R5TYHYwnGpFSi8plZrAABmeAAAAAAAAAHobR+Pt8ZpuxtreCinRjOb7ZTkk236TbEI5MNV0Mnj6OIupqF/b01CG74VoJcGvKl1r09+03OMuac4VZKe5w91TnTqyVTc12pMtTwmGr5KpRqVlSXCEFvu3wW77F5Sg8/mL3N5Kd9fVOdOXCMV8WEeyKXYj0ZUhCpTlTqRjOEk1KMlumn2Mp3lH0VPEVJ5PGQlPHye84Li6Df/b5ew2Ok1aUJOMl6T2f8Gy0etRhNxkvSez/g7/B509Yam5W8NjsnTjVs4SncVKUttqnRwclFp9abS3Xatz3ikkkktkj86tAamvNH6wxuo7GKnVsqvOdNvZVINOM4N9m8W1v2b7ntfSnLDyeagxlO7jqbH42o4p1LfIV429Sm+1eO0peeLaMdboVZVIzSzHB1tJrGCfAg2Q5XuTSxcun1ljJ81tPoJut1PbhzE9yK5nwkOTix5ys6mVyjS8V29pzE3/8AI4teo08LO4ntB+4lckupcYPLmo/CmyNSMqentLW1u+O1W9ruq/2IqO37TKo1fys8oGqYzpZPUd1C2ktnb2rVCm13NQ2539rcvUdFuJ97Ef8AvUYOrFHsPXXKtoXR0akMrm6NW8hv/wCjtPs1dvuaXCL+U4nnjlG8JDU2bjUstLW6wNnLdOvuqlzNfK6oehNr8Yox8Xuwbm20ihR5y9J+v6EUqrZ2XVxXurmpc3VepXr1ZOVSpUm5Sm31tt8WzrANqRgAAAAAAA0+pc5QxFtstqlzNfY6e/tfk95HVqwpQc5vCR6k28I6tWZ2GKtuhotSu6i8RfiL8ZlbznKpOU5ycpSe7be7bOd1XrXVxOvXqSqVJveUn2nUcXfXsrqpl7LZFmEeFAAFIzAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMrGX9zjruNza1ObNcGuyS7mu4snAZq1y9DnU2oV4r7JSb4ryrvRVh221etbV417epKnUg94yi+KNhY6hO1ljePh9DCcFIuIEa03qmhfKNteuNC56lLqhU+h+Qkp19C4p14cdN5RWaa3AAJjwAAAAAA50KtWhWhWo1JU6kJKUJxezi11NMufk81nSztGNjfSjTyUI+ZVku1eXvXpXkpU50KtWhWhWo1JU6kJKUJxezi11NMq3dpC5hh79GVLyzhdQw9+jPTJ8qQhUpyp1IxnCSalGS3TT7GQ7k81nSztGNjfSjTyUI+ZVku1eXvXpXkmRylajOjPhlucfWozoTcJrmUlynaYpYDI07iyTVldbuMH/ADcl1x83Hh/4IgWfy35K3lCxxVOcZVoTdaok+MFttHfz7v1FYHU2E5zoRlPc67Tqk6lvGU9wAC4XQAAAAAAAAAAAAD5JqMXKTSSW7b7CIal1ZGnzrXFSUp9Uq/Yvk9/nK9zdU7aPFNmUYuWxstTaioYqDo0ebVvGuEeyHll9BXd1XrXVxOvXqSqVJveUn2nCcpTnKc5OUpPdtvdtnE4+9vql1LL5LoixGCiAAUjMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEj0/qq6sObQvOdc264J7+PDzPt8zI4CahcVKEuKm8M8aT3Ldx1/aZCh01pWjUj2pdcfI12GUU7aXNxaVlWtq06VRdUovYl2H1p8WllKXk6amvfH6PUdJaazTqejV9F/D7EEqTWxNAdFleWt7S6W1r060O+L6vP3HebqMlJZTIgAD0AAAHKlUqUasatKcqdSL3jKL2afemSJa61Urb4P9Vp83bbndHDn7fK239PWRsEc6UJ95Jkc6NOp34p+Zzr1atetOtXqTq1JveU5y3cn3ts4AEhJsAAAAAAAAAADDyWSscdT593cQp8OEd95PzLrMZTjBcUnhHu5mGvy+XscXS511VXPa8WnHjKXo+cima1lXrb0sbTdCHV0k1vN+ZdS9pFqtSpVqSqVZyqTk93KT3b9JpLvWoQ9Gjzfj0JY0n1Nvn9RXuVbpJ9Bbfkovr+U+33GlAObq1p1pcU3lkySWwABGegAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHbbXFe2qqrb1p0prqlCWzJFjNZX1DaF5ShdQX4S8WX0P1EYBPRuqtB5pyweOKe5ZeP1TiLvZSru3m/way5q9fUbqnOFSCnTnGcX1OL3TKaO22ubi2nz7evVoy74Tcfcbejrs1yqRz5ciJ0l0LiBWlpqrNUNk7iNeK7KsE/atmbS31xWX8osKc/LCo4+9M2NPWbaW+V7PpkwdKSJuCL2+tMfUkoztbqMn3KLXvRt7XL21yk4QrLhvxS+kv07mlU7rMHFo2IOFKaqU1OKaT7z5XqxoxUpJtN7cCbKxk8OwGru85aWzfSU6722+LFfSaitrexjv0Vnczf6TjH52QVLqlT7z+ZkotkrBBbnXF1L+T2NGn8uTl7tjV3ep81cbp3bpRfZSio+3r9pQqa1bR7uX7PqZKlIsqvXo29PpK9anSgvwpySXtNHkNW4m2TVGc7qfdTWy9b+bcrutVq1p8+tVnUm/wpybftOBrq2u1JcqccfEkVJdSRZPV2Tut4W/NtKb/E4y/afzbEfq1J1ajqVJynOT3cpPds4g1Fa4q1nmpLJIopbAAEJ6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/9k=";
+const LOGO_C_B64 = "LOGO_C_PLACEHOLDER";
+
+document.getElementById('logo-h').src = 'data:image/jpeg;base64,' + LOGO_H_B64;
+document.getElementById('logo-h2').src = 'data:image/jpeg;base64,' + LOGO_H_B64;
+
+function show(id, navEl) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById('s-' + id).classList.add('on');
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+  if (navEl) navEl.classList.add('on');
+  const titles = {
+    dashboard:'Dashboard', pipeline:'Pipeline', leads:'Leads',
+    calculator:'Rate Calculator', notifications:'Notifications',
+    deal:'Deal Detail — Arctic Cold Storage', onboarding:'Onboarding — ProShip Inc.',
+    partner:'Partner Portal', 'manual-lead':'Manual Lead Entry', users:'User Management', 'notif-settings':'Notification Rules', settings:'Settings'
+  };
+  document.getElementById('tb-title').textContent = titles[id] || id;
+}
+</script>
+</body>
+</html>

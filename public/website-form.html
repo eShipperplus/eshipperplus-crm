@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eShipper Plus — Get a Quote</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--purple:#34368a;--purple-dk:#27296b;--teal:#62c0ae;--border:#dde0f0;--text:#1a1c3a;--text2:#5a5d7e;--text3:#9496b4;--surface:#f5f6fc;--success:#2ba877;--danger:#cc3d3d;--r:8px}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Poppins',sans-serif;font-size:13px;background:var(--surface);color:var(--text);min-height:100vh;padding:24px 16px}
+  .wrap{max-width:600px;margin:0 auto;background:#fff;border-radius:var(--r);overflow:hidden;border:1px solid var(--border)}
+  .hdr{background:var(--purple);padding:22px 24px;color:#fff}
+  .hdr h1{font-size:18px;font-weight:600}
+  .hdr p{font-size:12px;opacity:.8;margin-top:4px}
+  .body{padding:22px 24px}
+  .fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+  .fg label{font-size:11px;color:var(--text2);font-weight:500}
+  .fg input,.fg select,.fg textarea{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--purple)}
+  .fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:500px){.fg2{grid-template-columns:1fr}}
+  .btn{font-family:inherit;font-size:13px;font-weight:500;padding:10px 22px;border-radius:6px;border:none;background:var(--purple);color:#fff;cursor:pointer;width:100%;margin-top:8px}
+  .btn:hover{background:var(--purple-dk)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .success{padding:18px;border:1px solid var(--success);background:#eaf6f0;color:#1a7050;border-radius:6px;text-align:center;font-size:13px}
+  .error{padding:12px;border:1px solid var(--danger);background:#fdeaea;color:#992020;border-radius:6px;font-size:12px;margin-top:10px}
+  .required{color:var(--danger)}
+  .srv{display:flex;align-items:center;gap:6px;padding:6px 0;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <h1>Get a quote — eShipper Plus</h1>
+      <p>Tell us a bit about your shipping needs and a member of our team will be in touch within one business day.</p>
+    </div>
+    <div class="body">
+      <form id="lead-form">
+        <div class="fg"><label>Company <span class="required">*</span></label><input type="text" id="companyName" required></div>
+        <div class="fg2">
+          <div class="fg"><label>Your name <span class="required">*</span></label><input type="text" id="contactName" required></div>
+          <div class="fg"><label>Email <span class="required">*</span></label><input type="email" id="contactEmail" required></div>
+        </div>
+        <div class="fg2">
+          <div class="fg"><label>Phone</label><input type="tel" id="contactPhone"></div>
+          <div class="fg"><label>Industry</label>
+            <select id="industry">
+              <option value="">—</option>
+              <option>Food & Beverage</option><option>Retail</option><option>E-Commerce</option>
+              <option>Auto Parts</option><option>Distribution</option><option>Apparel</option>
+              <option>Pharmaceutical</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Services you're interested in</label>
+          <label class="srv"><input type="checkbox" data-svc="Freight"> Freight</label>
+          <label class="srv"><input type="checkbox" data-svc="Small Parcel"> Small Parcel</label>
+          <label class="srv"><input type="checkbox" data-svc="Warehousing & Fulfillment"> Warehousing & Fulfillment</label>
+          <label class="srv"><input type="checkbox" data-svc="Cross-Docking"> Cross-Docking</label>
+          <label class="srv"><input type="checkbox" data-svc="Value Added Services"> Value Added Services</label>
+        </div>
+        <div class="fg"><label>Estimated monthly spend</label>
+          <select id="estimatedSpend">
+            <option value="0">—</option>
+            <option value="3000">&lt; $5,000 / month</option>
+            <option value="7500">$5,000–$10,000 / month</option>
+            <option value="17500">$10,000–$25,000 / month</option>
+            <option value="40000">$25,000+ / month</option>
+          </select>
+        </div>
+        <div class="fg"><label>Tell us more</label><textarea id="notes" rows="3"></textarea></div>
+        <button type="submit" class="btn" id="submit-btn">Request a Quote</button>
+        <div id="error" class="error" style="display:none"></div>
+      </form>
+      <div id="success" class="success" style="display:none">
+        <strong>Thanks!</strong> We've received your request and a member of our team will be in touch within one business day.
+      </div>
+    </div>
+  </div>
+
+<script>
+document.getElementById('lead-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('error');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  try {
+    const spend = Number(document.getElementById('estimatedSpend').value) || 0;
+    const selectedSvcs = Array.from(document.querySelectorAll('[data-svc]:checked')).map(i => i.dataset.svc);
+    const services = selectedSvcs.length
+      ? selectedSvcs.map((name, i, arr) => ({ name, monthlyRevenue: Math.round(spend / arr.length) }))
+      : [{ name: 'General inquiry', monthlyRevenue: spend }];
+    const body = {
+      companyName: document.getElementById('companyName').value,
+      contactName: document.getElementById('contactName').value,
+      contactEmail: document.getElementById('contactEmail').value,
+      contactPhone: document.getElementById('contactPhone').value,
+      industry: document.getElementById('industry').value,
+      notes: document.getElementById('notes').value,
+      services,
+    };
+    const r = await fetch('/public/leads/website', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || 'Submission failed');
+    }
+    document.getElementById('lead-form').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Request a Quote';
+  }
+});
+</script>
+</body>
+</html>

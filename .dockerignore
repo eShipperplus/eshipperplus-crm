@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+.env
+.env.*
+*.md
+coverage
+tmp
+*service-account*.json
+*serviceAccount*.json

@@ -1,0 +1,17 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/eshipperplus-crm/eshipperplus-crm', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/eshipperplus-crm/eshipperplus-crm']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - eshipperplus-crm
+      - --image=northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/eshipperplus-crm/eshipperplus-crm
+      - --region=northamerica-northeast2
+      - --platform=managed
+      - --allow-unauthenticated
+images:
+  - 'northamerica-northeast2-docker.pkg.dev/$PROJECT_ID/eshipperplus-crm/eshipperplus-crm'

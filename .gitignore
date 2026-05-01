@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+.claude/
+coverage/
+tmp/

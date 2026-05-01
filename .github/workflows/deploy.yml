@@ -1,0 +1,107 @@
+name: Deploy CRM to Cloud Run
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server.js'
+      - 'rules/**'
+      - 'services/**'
+      - 'public/**'
+      - 'package*.json'
+      - 'Dockerfile'
+      - 'cloudbuild.yaml'
+      - 'firestore.indexes.json'
+      - 'firestore.rules'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push container
+        run: |
+          BUILD_ID=$(gcloud builds submit \
+            --config cloudbuild.yaml \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --async \
+            --format="value(id)")
+          echo "Build ID: $BUILD_ID"
+          for i in $(seq 1 60); do
+            STATUS=$(gcloud builds describe "$BUILD_ID" \
+              --project ${{ secrets.GCP_PROJECT_ID }} \
+              --format="value(status)")
+            echo "[$i/60] Status: $STATUS"
+            if [ "$STATUS" = "SUCCESS" ]; then break; fi
+            if [ "$STATUS" = "FAILURE" ] || [ "$STATUS" = "CANCELLED" ] || [ "$STATUS" = "TIMEOUT" ]; then
+              exit 1
+            fi
+            sleep 20
+          done
+
+      - name: Deploy Firestore indexes
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          deploy_index() {
+            gcloud firestore indexes composite create "$@" \
+              --project "$FIREBASE_PROJECT_ID" --quiet 2>&1 \
+              | grep -v "already exists" || true
+          }
+          deploy_index --collection-group=crm_deals \
+            --field-config=field-path=stage,order=ascending \
+            --field-config=field-path=updatedAt,order=descending
+          deploy_index --collection-group=crm_deals \
+            --field-config=field-path=ownerUid,order=ascending \
+            --field-config=field-path=updatedAt,order=descending
+          deploy_index --collection-group=crm_deals \
+            --field-config=field-path=source,order=ascending \
+            --field-config=field-path=createdAt,order=descending
+          deploy_index --collection-group=crm_deals \
+            --field-config=field-path=duplicateFlag,order=ascending \
+            --field-config=field-path=createdAt,order=descending
+          deploy_index --collection-group=crm_notifications \
+            --field-config=field-path=recipientUid,order=ascending \
+            --field-config=field-path=read,order=ascending \
+            --field-config=field-path=createdAt,order=descending
+          deploy_index --collection-group=crm_activity \
+            --field-config=field-path=dealId,order=ascending \
+            --field-config=field-path=timestamp,order=descending
+
+      - name: Update Cloud Run env vars
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SA_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+          CONTRACT_TEMPLATE_DOC_ID: ${{ secrets.CONTRACT_TEMPLATE_DOC_ID }}
+          PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
+        run: |
+          python3 -c "import os,yaml; yaml.dump({'GCP_PROJECT':os.environ['FIREBASE_PROJECT_ID'],'FIREBASE_SERVICE_ACCOUNT':os.environ['FIREBASE_SA_JSON'],'SMTP_USER':os.environ.get('SMTP_USER',''),'SMTP_PASS':os.environ.get('SMTP_PASS',''),'GOOGLE_DRIVE_FOLDER_ID':os.environ.get('GOOGLE_DRIVE_FOLDER_ID',''),'CONTRACT_TEMPLATE_DOC_ID':os.environ.get('CONTRACT_TEMPLATE_DOC_ID',''),'PUBLIC_APP_URL':os.environ.get('PUBLIC_APP_URL','')},open('/tmp/ev.yaml','w'))"
+          gcloud run services update eshipperplus-crm \
+            --region northamerica-northeast2 \
+            --project "$GCP_PROJECT_ID" \
+            --env-vars-file /tmp/ev.yaml \
+            --quiet
+
+      - name: Schedule inactivity cron (Cloud Scheduler → /cron/inactivity-sweep)
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
+        run: |
+          gcloud scheduler jobs describe crm-inactivity-sweep \
+            --location=northamerica-northeast2 --project="$GCP_PROJECT_ID" 2>/dev/null \
+            || gcloud scheduler jobs create http crm-inactivity-sweep \
+              --location=northamerica-northeast2 \
+              --project="$GCP_PROJECT_ID" \
+              --schedule="0 9 * * *" \
+              --time-zone="America/Toronto" \
+              --uri="${PUBLIC_APP_URL}/cron/inactivity-sweep" \
+              --http-method=POST \
+              --headers="X-Cron-Secret=${CRON_SECRET}"

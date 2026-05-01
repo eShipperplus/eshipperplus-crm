@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eShipper Plus — Partner Lead Submission</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--purple:#34368a;--purple-dk:#27296b;--teal:#62c0ae;--grey:#e6e7e8;--border:#dde0f0;--text:#1a1c3a;--text2:#5a5d7e;--text3:#9496b4;--surface:#f5f6fc;--success:#2ba877;--danger:#cc3d3d;--r:8px}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Poppins',sans-serif;font-size:13px;background:var(--surface);color:var(--text);min-height:100vh;padding:24px 16px}
+  .wrap{max-width:640px;margin:0 auto}
+  .hdr{background:var(--purple);padding:28px;color:#fff;border-radius:var(--r) var(--r) 0 0}
+  .hdr h1{font-size:20px;font-weight:600;margin-bottom:6px}
+  .hdr p{font-size:12px;opacity:.8}
+  .body{background:#fff;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:26px}
+  .sec{font-size:12px;font-weight:600;padding-bottom:6px;border-bottom:1px solid var(--border);margin:18px 0 12px}
+  .sec:first-child{margin-top:0}
+  .fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+  .fg label{font-size:11px;color:var(--text2);font-weight:500}
+  .fg input,.fg select,.fg textarea{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--purple)}
+  .fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:520px){.fg2{grid-template-columns:1fr}}
+  .srv{display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:center;padding:8px 10px;background:var(--surface);border-radius:6px;margin-bottom:6px}
+  .srv label{font-size:12px;display:flex;align-items:center;gap:8px}
+  .btn{font-family:inherit;font-size:13px;font-weight:500;padding:10px 22px;border-radius:6px;border:none;background:var(--purple);color:#fff;cursor:pointer;width:100%;margin-top:12px}
+  .btn:hover{background:var(--purple-dk)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .note{font-size:11px;color:var(--text3);margin-top:3px}
+  .success{padding:18px;border:1px solid var(--success);background:#eaf6f0;color:#1a7050;border-radius:6px;text-align:center;font-size:13px;margin-top:16px}
+  .error{padding:12px;border:1px solid var(--danger);background:#fdeaea;color:#992020;border-radius:6px;font-size:12px;margin-top:10px}
+  .required{color:var(--danger)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+      <h1>Submit a Lead — eShipper Plus</h1>
+      <p>Channel partner portal · leads routed to the sales team within one business day</p>
+    </div>
+    <div class="body">
+      <form id="lead-form">
+        <div class="sec">Your details (partner)</div>
+        <div class="fg">
+          <label>Partner company / rep</label>
+          <select id="partner-rep" required>
+            <option value="">— Select your company & rep —</option>
+          </select>
+          <div class="note">Can't see your name? Ask your eShipper contact to add you to the partner directory.</div>
+        </div>
+
+        <div class="sec">Client details</div>
+        <div class="fg">
+          <label>Company name <span class="required">*</span></label>
+          <input type="text" id="companyName" required>
+        </div>
+        <div class="fg2">
+          <div class="fg">
+            <label>Contact name <span class="required">*</span></label>
+            <input type="text" id="contactName" required>
+          </div>
+          <div class="fg">
+            <label>Contact title</label>
+            <input type="text" id="contactTitle">
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fg">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" id="contactEmail" required>
+          </div>
+          <div class="fg">
+            <label>Phone</label>
+            <input type="tel" id="contactPhone">
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="fg">
+            <label>Industry</label>
+            <select id="industry">
+              <option value="">—</option>
+              <option>Food & Beverage</option><option>Retail</option><option>E-Commerce</option>
+              <option>Auto Parts</option><option>Distribution</option><option>Apparel</option>
+              <option>Pharmaceutical</option><option>Other</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Website</label>
+            <input type="url" id="website" placeholder="https://">
+          </div>
+        </div>
+
+        <div class="sec">Services & estimated monthly spend</div>
+        <div class="srv"><label><input type="checkbox" data-svc="Freight">Freight</label><input type="number" placeholder="$/mo" data-svc-rev="Freight"></div>
+        <div class="srv"><label><input type="checkbox" data-svc="Small Parcel">Small Parcel</label><input type="number" placeholder="$/mo" data-svc-rev="Small Parcel"></div>
+        <div class="srv"><label><input type="checkbox" data-svc="Warehousing & Fulfillment">Warehousing & Fulfillment</label><input type="number" placeholder="$/mo" data-svc-rev="Warehousing & Fulfillment"></div>
+        <div class="srv"><label><input type="checkbox" data-svc="Cross-Docking">Cross-Docking</label><input type="number" placeholder="$/mo" data-svc-rev="Cross-Docking"></div>
+        <div class="srv"><label><input type="checkbox" data-svc="Value Added Services">Value Added Services</label><input type="number" placeholder="$/mo" data-svc-rev="Value Added Services"></div>
+
+        <div class="sec">Notes</div>
+        <div class="fg">
+          <textarea id="notes" rows="3" placeholder="Anything the sales team should know — urgency, pain points, current provider..."></textarea>
+        </div>
+
+        <button type="submit" class="btn" id="submit-btn">Submit Lead</button>
+        <div id="error" class="error" style="display:none"></div>
+      </form>
+
+      <div id="success" class="success" style="display:none">
+        <strong>Thanks!</strong><br>
+        Your lead has been submitted. An eShipper Plus rep will be in touch within one business day.
+        <div style="margin-top:10px"><a href="/partner" style="color:var(--purple)">Submit another lead →</a></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function loadPartnerDirectory() {
+  try {
+    const r = await fetch('/public/partner-reps');
+    const entries = await r.json();
+    const sel = document.getElementById('partner-rep');
+    // Group by company
+    const byCompany = {};
+    for (const e of entries) {
+      (byCompany[e.company] = byCompany[e.company] || []).push(e.repName);
+    }
+    Object.keys(byCompany).sort().forEach(company => {
+      const g = document.createElement('optgroup');
+      g.label = company;
+      byCompany[company].forEach(rep => {
+        const o = document.createElement('option');
+        o.value = JSON.stringify({ company, repName: rep });
+        o.textContent = rep;
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    });
+  } catch (err) { console.error(err); }
+}
+
+document.getElementById('lead-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('error');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  try {
+    const repVal = document.getElementById('partner-rep').value;
+    if (!repVal) throw new Error('Please select your company & rep from the directory.');
+    const partnerRep = JSON.parse(repVal);
+    const services = [];
+    document.querySelectorAll('[data-svc]:checked').forEach(cb => {
+      const name = cb.dataset.svc;
+      const revInput = document.querySelector(`[data-svc-rev="${name}"]`);
+      services.push({ name, monthlyRevenue: Number(revInput?.value) || 0 });
+    });
+    const body = {
+      companyName: document.getElementById('companyName').value,
+      contactName: document.getElementById('contactName').value,
+      contactEmail: document.getElementById('contactEmail').value,
+      contactPhone: document.getElementById('contactPhone').value,
+      industry: document.getElementById('industry').value,
+      website: document.getElementById('website').value,
+      notes: document.getElementById('notes').value,
+      services,
+      partnerRep,
+    };
+    const r = await fetch('/public/leads/partner', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      throw new Error(j.error || 'Submission failed');
+    }
+    document.getElementById('lead-form').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+  } catch (e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Submit Lead';
+  }
+});
+
+loadPartnerDirectory();
+</script>
+</body>
+</html>
