@@ -484,6 +484,11 @@ window.openDeal = async (id) => {
       api(`/api/deals/${id}/activity`),
     ]);
     window.__crmState.currentDeal = deal;
+    // Hide the empty state, show real content
+    const emptyState = document.getElementById('deal-empty-state');
+    const dealContent = document.getElementById('deal-content');
+    if (emptyState) emptyState.style.display = 'none';
+    if (dealContent) dealContent.style.display = 'block';
     renderDealDetail(deal, activity);
     if (typeof window.show === 'function') {
       const navEl = document.querySelector('.ni[onclick*="deal"]');
@@ -1013,7 +1018,17 @@ function setupAutoRefresh() {
   // Pipeline, Leads, Notifications, User Management) — they expect the
   // screen they're switching to to be current.
   document.querySelectorAll('#sb .ni').forEach(ni => {
-    ni.addEventListener('click', () => refreshAll({ silent: true }));
+    ni.addEventListener('click', () => {
+      refreshAll({ silent: true });
+      // If user navigates to Deal Detail without first selecting a deal,
+      // show the empty state instead of stale content.
+      if (ni.getAttribute('onclick')?.includes("'deal'") && !window.__crmState.currentDeal) {
+        const emptyState = document.getElementById('deal-empty-state');
+        const dealContent = document.getElementById('deal-content');
+        if (emptyState) emptyState.style.display = 'flex';
+        if (dealContent) dealContent.style.display = 'none';
+      }
+    });
   });
 }
 

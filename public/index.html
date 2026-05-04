@@ -737,6 +737,20 @@ textarea.fi{resize:vertical;min-height:68px}
     </div>
     <!-- ═══ DEAL DETAIL ═══ -->
     <div class="screen" id="s-deal">
+      <!-- Empty state shown until a deal is opened -->
+      <div id="deal-empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;padding:40px">
+        <div style="font-size:48px;margin-bottom:16px">📋</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:8px">No deal selected</div>
+        <div style="font-size:13px;color:var(--text3);max-width:400px;line-height:1.7;margin-bottom:20px">
+          Pick a deal from the <strong>Pipeline</strong> or <strong>Leads</strong> screen to see its full detail here.
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="show('pipeline',document.querySelector('.ni[onclick*=pipeline]'))">Go to Pipeline</button>
+          <button class="btn btn-p btn-sm" onclick="show('leads',document.querySelector('.ni[onclick*=leads]'))">Go to Leads</button>
+        </div>
+      </div>
+      <!-- Real deal content (shown by openDeal) -->
+      <div id="deal-content" style="display:none">
       <!-- Deal Header + Rep Bar -->
       <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
@@ -856,8 +870,8 @@ textarea.fi{resize:vertical;min-height:68px}
             </div>
           </div>
 
-          <!-- Profitability (Admin only) -->
-          <div class="card" style="margin-bottom:14px;border:1.5px solid var(--purple)">
+          <!-- Profitability (Admin only) — Phase 2 per spec §10, hidden in MVP -->
+          <div class="card" id="profitability-card" style="display:none;margin-bottom:14px;border:1.5px solid var(--purple)">
             <div class="ch" style="background:var(--purple)">
               <span class="ct" style="color:#fff">🔒 Profitability Analysis</span>
               <span class="cs" style="color:rgba(255,255,255,.5)">Admin only · costs set in Settings → Cost Inputs</span>
@@ -961,6 +975,7 @@ textarea.fi{resize:vertical;min-height:68px}
         </div>
       </div>
 
+      </div> <!-- /deal-content -->
     </div>
     <!-- ═══ ONBOARDING ═══ -->
     <div class="screen" id="s-onboarding">
