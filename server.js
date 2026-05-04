@@ -56,7 +56,20 @@ app.use(helmet({
   // Firebase Auth popup needs to read from the popup window — strict COOP breaks it
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   crossOriginEmbedderPolicy: false,
+  // Default X-Frame-Options to SAMEORIGIN; we override per-route for the
+  // public intake pages so they can be iframed from eshipperplus.com.
+  frameguard: { action: 'sameorigin' },
 }));
+
+// Public intake pages (/partner and /website-form) are designed to be
+// embedded via iframe on eshipperplus.com (and any subdomain). Override the
+// default SAMEORIGIN frame guard for these specific routes.
+const FRAME_ANCESTORS = "frame-ancestors 'self' https://eshipperplus.com https://*.eshipperplus.com";
+const allowFraming = (req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', FRAME_ANCESTORS);
+  next();
+};
 app.use(cors({
   origin: (origin, cb) => cb(null, true),
   credentials: true,
@@ -666,8 +679,8 @@ async function userName(uid) {
 }
 
 // ─── SPA fallback ──────────────────────────────────────────────────────────
-app.get('/partner', (req, res) => res.sendFile(path.join(__dirname, 'public/partner.html')));
-app.get('/website-form', (req, res) => res.sendFile(path.join(__dirname, 'public/website-form.html')));
+app.get('/partner',     allowFraming, (req, res) => res.sendFile(path.join(__dirname, 'public/partner.html')));
+app.get('/website-form', allowFraming, (req, res) => res.sendFile(path.join(__dirname, 'public/website-form.html')));
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/public/') ||
       req.path.startsWith('/cron/') || req.path.startsWith('/webhooks/')) return next();
