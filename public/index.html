@@ -1045,7 +1045,7 @@ textarea.fi{resize:vertical;min-height:68px}
                 </tr>
                 <tr>
                   <td>Warehousing &amp; Fulfillment</td>
-                  <td><input type="checkbox" checked></td>
+                  <td><input type="checkbox" data-rule-toggle checked></td>
                   <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$12,000"></td>
                 </tr>
                 <tr>
@@ -1350,49 +1350,49 @@ textarea.fi{resize:vertical;min-height:68px}
             <td><strong>R-03</strong></td><td>New lead submitted</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>T+0 · Immediate</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-04</strong></td><td>New lead submitted</td><td>Lead / Client</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>T+0 · Immediate</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-05</strong></td><td>Meeting requested on form</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
             <td>T+0 · Immediate</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
-          <tr style="background:#fef9f0">
-            <td><strong>R-07</strong></td><td>Deal inactive <input class="fi" type="text" value="1" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Assigned Rep</td>
+          <tr style="background:#fef9f0" data-rule="R-07">
+            <td><strong>R-07</strong></td><td>Deal inactive <input class="fi" type="number" min="1" id="cfg-inactivity-rep-days" value="3" style="width:42px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Assigned Rep</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
-            <td>T+<strong>1d</strong> (editable)</td>
-            <td><input type="checkbox" checked></td>
-          </tr>
-          <tr style="background:#fef9f0">
-            <td><strong>R-08</strong></td><td>Deal inactive <input class="fi" type="text" value="3" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Aamer + Ahmed</td>
-            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>T+<strong>3d</strong> (editable)</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle="R-07" checked></td>
           </tr>
-          <tr style="background:#fef9f0">
-            <td><strong>R-09</strong></td><td>Deal inactive <input class="fi" type="text" value="7" style="width:36px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Aamer + Ahmed</td>
-            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+          <tr style="background:#fef9f0" data-rule="R-08">
+            <td><strong>R-08</strong></td><td>Deal inactive <input class="fi" type="number" min="1" id="cfg-inactivity-admin-days" value="7" style="width:42px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s)</td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>T+<strong>7d</strong> (editable)</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle="R-08" checked></td>
+          </tr>
+          <tr style="background:#fef9f0;opacity:.6" data-rule="R-09" title="Phase 2 — auto-stall not active in MVP">
+            <td><strong>R-09</strong></td><td>Deal inactive <input class="fi" type="number" min="1" id="cfg-inactivity-stall-days" value="30" disabled style="width:42px;padding:2px 5px;font-size:11px;display:inline;margin:0 3px"> day(s) <span style="font-size:9.5px;color:var(--text3)">Phase 2</span></td><td>Aamer + Ahmed</td>
+            <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
+            <td>T+<strong>30d</strong> (Phase 2)</td>
+            <td><input type="checkbox" data-rule-toggle="R-09" disabled></td>
           </tr>
           <tr>
             <td><strong>R-10</strong></td><td>Deal stalled (30 days)</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
             <td>T+30d (editable)</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-12</strong></td><td>Proposal approval requested</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
             <td>On stage move</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-14</strong></td><td>Proposal approved — ready to send</td><td>Assigned Rep</td>
@@ -1410,13 +1410,13 @@ textarea.fi{resize:vertical;min-height:68px}
             <td><strong>R-18</strong></td><td>Rate sign-off required</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
             <td>On discount entered</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-22</strong></td><td>Contract sent to client</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>On Closed Won</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-24</strong></td><td>Deal moved to Onboarding</td><td>Kim W.</td>
@@ -1428,7 +1428,7 @@ textarea.fi{resize:vertical;min-height:68px}
             <td><strong>R-26</strong></td><td>Onboarding started</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span></td>
             <td>On signature</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-29</strong></td><td>Re-engagement date reached</td><td>Assigned Rep</td>
@@ -1440,7 +1440,7 @@ textarea.fi{resize:vertical;min-height:68px}
             <td><strong>R-31</strong></td><td>Meeting request submitted</td><td>Aamer + Ahmed</td>
             <td><span style="background:#edf8f5;color:#1a6858;border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">Email</span> <span style="background:#eef0f8;color:var(--purple);border-radius:3px;padding:1px 6px;font-weight:600;font-size:10px">In-App</span></td>
             <td>T+0 · Immediate</td>
-            <td><input type="checkbox" checked></td>
+            <td><input type="checkbox" data-rule-toggle checked></td>
           </tr>
           <tr>
             <td><strong>R-32</strong></td><td>Meeting confirmed</td><td>All participants</td>

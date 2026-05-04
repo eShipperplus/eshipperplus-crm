@@ -876,24 +876,55 @@ function wireUserManagement() {
 
 function wireNotificationRulesForm() {
   if (currentUser?.role !== 'admin') return;
-  // Load current notification_rules settings and populate any matching inputs
-  api('/api/settings/notification_rules').then(cfg => {
-    const repField = document.getElementById('cfg-inactivity-rep-days');
-    const adminField = document.getElementById('cfg-inactivity-admin-days');
-    if (repField && cfg.inactivityRepDays) repField.value = cfg.inactivityRepDays;
-    if (adminField && cfg.inactivityAdminDays) adminField.value = cfg.inactivityAdminDays;
-  }).catch(() => {});
 
-  // Wire Save Changes button on Notification Rules screen
+  // Helper — read the rule ID ("R-03", "R-07", ...) from the row a checkbox lives in
+  const ruleIdFromCheckbox = (cb) => {
+    const row = cb.closest('tr');
+    const strong = row?.querySelector('td:first-child strong');
+    return strong?.textContent.trim() || null;
+  };
+
+  const loadSettings = async () => {
+    try {
+      const cfg = await api('/api/settings/notification_rules');
+      const repField = document.getElementById('cfg-inactivity-rep-days');
+      const adminField = document.getElementById('cfg-inactivity-admin-days');
+      const stallField = document.getElementById('cfg-inactivity-stall-days');
+      if (repField && cfg.inactivityRepDays) repField.value = cfg.inactivityRepDays;
+      if (adminField && cfg.inactivityAdminDays) adminField.value = cfg.inactivityAdminDays;
+      if (stallField && cfg.inactivityStallDays) stallField.value = cfg.inactivityStallDays;
+
+      // Toggle each rule checkbox from saved enabledRules map
+      const enabledRules = cfg.enabledRules || {};
+      document.querySelectorAll('[data-rule-toggle]').forEach(cb => {
+        if (cb.disabled) return; // Phase 2 rules stay disabled
+        const ruleId = ruleIdFromCheckbox(cb);
+        if (ruleId && enabledRules[ruleId] === false) cb.checked = false;
+      });
+    } catch (err) { /* silent on first load */ }
+  };
+  loadSettings();
+
+  // Save Changes — collect everything and PUT
   const saveBtn = document.querySelector('#s-notif-settings .btn-p');
   if (saveBtn && !saveBtn.dataset.wired) {
     saveBtn.dataset.wired = '1';
     saveBtn.onclick = async () => {
       const repField = document.getElementById('cfg-inactivity-rep-days');
       const adminField = document.getElementById('cfg-inactivity-admin-days');
-      const payload = {};
-      if (repField) payload.inactivityRepDays = Number(repField.value) || 3;
-      if (adminField) payload.inactivityAdminDays = Number(adminField.value) || 7;
+
+      const enabledRules = {};
+      document.querySelectorAll('[data-rule-toggle]').forEach(cb => {
+        if (cb.disabled) return;
+        const ruleId = ruleIdFromCheckbox(cb);
+        if (ruleId) enabledRules[ruleId] = cb.checked;
+      });
+
+      const payload = {
+        inactivityRepDays: Number(repField?.value) || 3,
+        inactivityAdminDays: Number(adminField?.value) || 7,
+        enabledRules,
+      };
       try {
         await api('/api/settings/notification_rules', {
           method: 'PUT', body: JSON.stringify(payload),
@@ -902,6 +933,9 @@ function wireNotificationRulesForm() {
       } catch (err) { toast(err.message, 'error'); }
     };
   }
+
+  // Refresh from server when the screen is opened (in case other admins changed it)
+  document.querySelector('.ni[onclick*="notif-settings"]')?.addEventListener('click', loadSettings);
 }
 
 // ─── Export CSV (Leads) ──────────────────────────────────────────────────────

@@ -25,6 +25,29 @@ const STAGES = [
 const DEFAULT_INACTIVITY_REP_DAYS = 3;      // R-07
 const DEFAULT_INACTIVITY_ADMIN_DAYS = 7;    // R-08
 
+// Cache the notification_rules settings doc so we don't refetch on every rule fire
+let _settingsCache = { value: null, fetchedAt: 0 };
+async function getSettings(db) {
+  const TTL_MS = 30_000;
+  if (_settingsCache.value && Date.now() - _settingsCache.fetchedAt < TTL_MS) {
+    return _settingsCache.value;
+  }
+  try {
+    const snap = await db.collection('crm_config').doc('notification_rules').get();
+    _settingsCache = { value: snap.exists ? snap.data() : {}, fetchedAt: Date.now() };
+  } catch (err) {
+    _settingsCache = { value: {}, fetchedAt: Date.now() };
+  }
+  return _settingsCache.value;
+}
+
+// Returns true unless the admin has explicitly disabled this rule.
+async function isRuleEnabled(db, ruleId) {
+  const cfg = await getSettings(db);
+  const enabled = cfg.enabledRules || {};
+  return enabled[ruleId] !== false;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function monthlyRevenue(deal) {
@@ -164,17 +187,19 @@ async function onLeadSubmit(db, dealId) {
   const admins = await adminRecipients(db);
   const adminEmails = admins.map(u => u.email).filter(Boolean);
   const adminUids = admins.map(u => u.uid);
-  await email.send({
-    to: adminEmails,
-    ...email.newLeadNotification({ deal, tier }),
-  });
-  await notify(db, {
-    recipientUids: adminUids,
-    type: 'lead',
-    title: `New lead: ${deal.companyName}`,
-    body: `${deal.source} · $${monthly.toLocaleString()}/mo · Tier ${tier} · Assigned to ${deal.ownerName || 'Unassigned'}`,
-    dealId,
-  });
+  if (await isRuleEnabled(db, 'R-03')) {
+    await email.send({
+      to: adminEmails,
+      ...email.newLeadNotification({ deal, tier }),
+    });
+    await notify(db, {
+      recipientUids: adminUids,
+      type: 'lead',
+      title: `New lead: ${deal.companyName}`,
+      body: `${deal.source} · $${monthly.toLocaleString()}/mo · Tier ${tier} · Assigned to ${deal.ownerName || 'Unassigned'}`,
+      dealId,
+    });
+  }
 
   // R-05 admin alert with side-by-side
   if (duplicates.length) {
@@ -194,7 +219,7 @@ async function onLeadSubmit(db, dealId) {
   }
 
   // R-04 — acknowledgement email (website + partner only — not manual entry)
-  if (deal.source === 'Website' || deal.source === 'Partner Portal') {
+  if ((deal.source === 'Website' || deal.source === 'Partner Portal') && await isRuleEnabled(db, 'R-04')) {
     if (deal.contactEmail) {
       await email.send({
         to: deal.contactEmail,
@@ -496,7 +521,7 @@ async function sweepInactivity(db, settings = {}) {
     const daysIdle = Math.floor((now - lastActivity.getTime()) / 86400000);
 
     // R-07 — rep notification at T+repDays
-    if (daysIdle >= repDays && !deal.inactivityRepNotified) {
+    if (daysIdle >= repDays && !deal.inactivityRepNotified && await isRuleEnabled(db, 'R-07')) {
       const rep = await getUser(db, deal.ownerUid);
       if (rep) {
         await email.send({ to: rep.email, ...email.inactivityRep({ deal, days: daysIdle }) });
@@ -514,7 +539,7 @@ async function sweepInactivity(db, settings = {}) {
     }
 
     // R-08 — admin escalation at T+adminDays
-    if (daysIdle >= adminDays && !deal.inactivityAdminNotified) {
+    if (daysIdle >= adminDays && !deal.inactivityAdminNotified && await isRuleEnabled(db, 'R-08')) {
       const rep = await getUser(db, deal.ownerUid);
       const admins = await adminRecipients(db);
       await email.send({
