@@ -47,6 +47,10 @@ const STAGE_PROGRESSION = {
 
 // ─── Express setup ──────────────────────────────────────────────────────────
 const app = express();
+// Cloud Run sits behind Google's load balancer — trust the first proxy hop so
+// req.ip resolves to the real client IP (not the LB) for rate limiting.
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: false,
   // Firebase Auth popup needs to read from the popup window — strict COOP breaks it
@@ -58,19 +62,18 @@ app.use(cors({
   credentials: true,
 }));
 
+// Default keyGenerator is IPv6-safe when trust proxy is set above.
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip,
 });
 app.use('/api/', apiLimiter);
 
 // Public intake endpoints get a tighter limit (abuse protection)
 const publicLimiter = rateLimit({
   windowMs: 60 * 1000, max: 20,
-  keyGenerator: (req) => req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip,
 });
 app.use('/public/', publicLimiter);
 
