@@ -65,6 +65,9 @@ jobs:
             --field-config=field-path=createdAt,order=descending
           deploy_index --collection-group=crm_notifications \
             --field-config=field-path=recipientUid,order=ascending \
+            --field-config=field-path=createdAt,order=descending
+          deploy_index --collection-group=crm_notifications \
+            --field-config=field-path=recipientUid,order=ascending \
             --field-config=field-path=read,order=ascending \
             --field-config=field-path=createdAt,order=descending
           deploy_index --collection-group=crm_activity \
