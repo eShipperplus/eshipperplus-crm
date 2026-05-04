@@ -64,18 +64,22 @@ function setAuthError(msg) {
 }
 
 onAuthStateChanged(fbAuth, async (user) => {
+  console.log('[auth] state changed, user:', user?.email || '(none)');
   if (!user) {
     currentUser = null;
     showAuthGate(true);
     return;
   }
   try {
+    console.log('[auth] calling /api/me with token...');
     const me = await api('/api/me');
+    console.log('[auth] /api/me ok:', me);
     currentUser = me;
     applyRoleToUI(me);
     showAuthGate(false);
     await bootAppData();
   } catch (err) {
+    console.error('[auth] /api/me failed:', err);
     setAuthError('Sign-in succeeded but backend rejected your token: ' + err.message);
   }
 });
@@ -86,17 +90,24 @@ function attachSignInHandler() {
   btn.addEventListener('click', async () => {
     setAuthError('');
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ hd: 'eshipperplus.com' }); // restrict to workspace domain
+    // NOTE: hd restriction removed for now — was silently filtering valid sign-ins
     try {
-      // Always use redirect flow — popup is too brittle (COOP, popup-blockers, extensions)
-      await signInWithRedirect(fbAuth, provider);
+      console.log('[auth] starting popup sign-in');
+      const result = await signInWithPopup(fbAuth, provider);
+      console.log('[auth] popup resolved with user:', result?.user?.email);
     } catch (err) {
-      setAuthError(err.message);
+      console.error('[auth] popup error:', err);
+      setAuthError(`${err.code || 'error'}: ${err.message}`);
     }
   });
 
-  // Handle the redirect-flow return trip (page reloads with the auth result)
-  getRedirectResult(fbAuth).catch(err => setAuthError(err.message));
+  // Also handle the redirect-flow return trip in case any future call uses redirect
+  getRedirectResult(fbAuth).then(r => {
+    if (r) console.log('[auth] redirect resolved with user:', r.user?.email);
+  }).catch(err => {
+    console.error('[auth] redirect error:', err);
+    setAuthError(`${err.code || 'error'}: ${err.message}`);
+  });
 }
 
 // ─── UI adaptation by role ───────────────────────────────────────────────────
