@@ -95,10 +95,13 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
         run: |
+          # Cloud Scheduler isn't available in northamerica-northeast2 — host the
+          # job in -northeast1 (Montreal). It calls the Cloud Run URL via HTTP,
+          # so cross-region is fine.
           gcloud scheduler jobs describe crm-inactivity-sweep \
-            --location=northamerica-northeast2 --project="$GCP_PROJECT_ID" 2>/dev/null \
+            --location=northamerica-northeast1 --project="$GCP_PROJECT_ID" 2>/dev/null \
             || gcloud scheduler jobs create http crm-inactivity-sweep \
-              --location=northamerica-northeast2 \
+              --location=northamerica-northeast1 \
               --project="$GCP_PROJECT_ID" \
               --schedule="0 9 * * *" \
               --time-zone="America/Toronto" \
