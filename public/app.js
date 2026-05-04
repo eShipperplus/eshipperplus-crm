@@ -88,15 +88,10 @@ function attachSignInHandler() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ hd: 'eshipperplus.com' }); // restrict to workspace domain
     try {
-      await signInWithPopup(fbAuth, provider);
+      // Always use redirect flow — popup is too brittle (COOP, popup-blockers, extensions)
+      await signInWithRedirect(fbAuth, provider);
     } catch (err) {
-      // Popup blocked / closed / extension interference → fall back to full-page redirect
-      if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request']
-            .includes(err.code)) {
-        await signInWithRedirect(fbAuth, provider);
-      } else {
-        setAuthError(err.message);
-      }
+      setAuthError(err.message);
     }
   });
 
