@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node dev_setup.js"
+    "seed": "node dev_setup.js",
+    "test": "jest --forceExit",
+    "test:watch": "jest --watch --forceExit",
+    "test:coverage": "jest --coverage --forceExit"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -20,7 +23,17 @@
     "nodemailer": "^6.10.1",
     "xlsx": "^0.18.5"
   },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  },
   "engines": {
     "node": ">=20"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   }
 }

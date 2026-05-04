@@ -575,6 +575,12 @@ function defaultChecklist() {
   ];
 }
 
+// Test helper — reset the settings cache so each test sees fresh config.
+// Not used in production; intentionally exposed for `tests/engine-flows.test.js`.
+function _resetSettingsCacheForTests() {
+  _settingsCache = { value: null, fetchedAt: 0 };
+}
+
 module.exports = {
   STAGES,
   tierFromMonthly,
@@ -588,4 +594,5 @@ module.exports = {
   sweepInactivity,
   sweepReengagement,
   defaultChecklist,
+  _resetSettingsCacheForTests,
 };

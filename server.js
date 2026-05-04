@@ -527,6 +527,7 @@ function parseRepDirectory(buffer, filename) {
     .filter(Boolean);
 }
 
+
 // ─── Notifications ──────────────────────────────────────────────────────────
 app.get('/api/notifications', requireAuth, async (req, res) => {
   const snap = await db.collection('crm_notifications')
@@ -694,4 +695,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`CRM server listening on :${PORT}`));
+// Only auto-listen when run directly (`node server.js`); when required by
+// tests, the test harness drives the express app via supertest.
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`CRM server listening on :${PORT}`));
+}
+
+module.exports = app;
+// Exported helpers for tests (attached to app so module.exports = app stays the entry point)
+app.__test = { parseRepDirectory };
