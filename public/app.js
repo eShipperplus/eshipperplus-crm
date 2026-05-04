@@ -56,6 +56,10 @@ window.crmApi = api;
 function showAuthGate(show) {
   const gate = document.getElementById('auth-gate');
   if (gate) gate.style.display = show ? 'flex' : 'none';
+  // Hide the app shell when the auth gate is up (prevents the mockup
+  // dashboard flashing behind the gate on every refresh).
+  const appShell = document.getElementById('app');
+  if (appShell) appShell.style.visibility = show ? 'hidden' : 'visible';
 }
 
 function setAuthError(msg) {
@@ -156,13 +160,94 @@ async function bootAppData() {
 // ─── Dashboard render ────────────────────────────────────────────────────────
 function renderDashboard(dash) {
   if (!dash) return;
-  const metrics = document.querySelectorAll('#s-dashboard .mrow .met .mv');
+  const screen = document.getElementById('s-dashboard');
+  if (!screen) return;
+
+  // Top metric cards
+  const metrics = screen.querySelectorAll('.mrow .met .mv');
   if (metrics.length >= 5) {
-    metrics[0].textContent = dash.activeDeals;
-    metrics[1].textContent = fmtCompact(dash.pipelineValue);
-    metrics[2].textContent = fmtCompact(dash.weightedForecast);
-    metrics[3].textContent = Math.round(dash.winRate * 100) + '%';
-    metrics[4].textContent = fmtCompact(dash.avgDealSize);
+    metrics[0].textContent = dash.activeDeals || 0;
+    metrics[1].textContent = fmtCompact(dash.pipelineValue || 0);
+    metrics[2].textContent = fmtCompact(dash.weightedForecast || 0);
+    metrics[3].textContent = Math.round((dash.winRate || 0) * 100) + '%';
+    metrics[4].textContent = fmtCompact(dash.avgDealSize || 0);
+  }
+  // Hide the "↑3 vs last month" sublabels — we don't compute deltas yet
+  screen.querySelectorAll('.mrow .met .ms').forEach(el => el.style.display = 'none');
+
+  // Pipeline Funnel — first card, .frow rows
+  const stages = ['New', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Contract', 'Onboarding'];
+  const funnelCard = screen.querySelectorAll('.card')[0];
+  if (funnelCard && dash.funnel) {
+    const max = Math.max(1, ...stages.map(s => dash.funnel[s]?.value || 0));
+    const colors = { 'New': '#34368a', 'Qualified': '#5258b0', 'Proposal Sent': '#6868bb', 'Negotiation': '#e0832a', 'Closed Won': '#2ba877', 'Contract': '#2588d0', 'Onboarding': '#62c0ae' };
+    funnelCard.querySelector('.cb').innerHTML = stages.map(stage => {
+      const count = dash.funnel[stage]?.count || 0;
+      const value = dash.funnel[stage]?.value || 0;
+      const w = max ? Math.max(2, (value / max) * 100) : 2;
+      return `<div class="frow">
+        <div class="fl">${stage}</div>
+        <div class="fbw"><div class="fb" style="width:${w}%;background:${colors[stage]}">${count} deal${count === 1 ? '' : 's'}</div></div>
+        <div class="fc">${fmtCompact(value)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Weighted Forecast card (second .card on dashboard)
+  const forecastCard = screen.querySelectorAll('.card')[1];
+  if (forecastCard && dash.funnel) {
+    const stageWeight = { 'New': 0.10, 'Qualified': 0.25, 'Proposal Sent': 0.40, 'Negotiation': 0.65, 'Closed Won': 0.90, 'Contract': 0.95, 'Onboarding': 1.00 };
+    const rows = stages.map(s => ({ s, weighted: (dash.funnel[s]?.value || 0) * (stageWeight[s] || 0) }));
+    const maxW = Math.max(1, ...rows.map(r => r.weighted));
+    forecastCard.querySelector('.cb').innerHTML = rows.map(r => {
+      const w = maxW ? Math.max(2, (r.weighted / maxW) * 100) : 2;
+      const pct = Math.round((stageWeight[r.s] || 0) * 100);
+      return `<div class="fcast-row">
+        <div class="fcast-s">${r.s} (${pct}%)</div>
+        <div class="fcast-bw"><div class="fcast-b" style="width:${w}%">${fmtCompact(r.weighted)}</div></div>
+        <div class="fcast-v">${fmtCompact(r.weighted)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Deals by Owner — third .card
+  const ownerCard = screen.querySelectorAll('.card')[2];
+  if (ownerCard && dash.byOwner) {
+    const sorted = [...dash.byOwner].sort((a, b) => b.pipeline - a.pipeline);
+    ownerCard.querySelector('.cb').innerHTML = `<table class="dt">
+      <tr><th>Rep</th><th>Deals</th><th>Pipeline</th></tr>
+      ${sorted.length ? sorted.map(o => `<tr>
+        <td><strong>${esc(o.name)}</strong></td>
+        <td>${o.deals}</td>
+        <td>${fmtCompact(o.pipeline)}</td>
+      </tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:18px">No deals yet</td></tr>'}
+    </table>`;
+  }
+
+  // Lead Sources — fourth .card
+  const sourcesCard = screen.querySelectorAll('.card')[3];
+  if (sourcesCard && dash.bySource) {
+    const total = Object.values(dash.bySource).reduce((s, n) => s + n, 0);
+    const colors = ['var(--purple)', 'var(--purple-lt)', 'var(--teal)', 'var(--teal-lt)', 'var(--grey-dk)'];
+    const entries = Object.entries(dash.bySource).sort((a, b) => b[1] - a[1]);
+    sourcesCard.querySelector('.cb').innerHTML = entries.length
+      ? entries.map(([name, count], i) => {
+          const pct = total ? Math.round((count / total) * 100) : 0;
+          return `<div class="srow">
+            <div class="sn">${esc(name)}</div>
+            <div class="sbw"><div class="sb" style="width:${pct}%;background:${colors[i % colors.length]}"></div></div>
+            <div class="sp">${pct}%</div>
+          </div>`;
+        }).join('')
+      : '<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px">No leads yet</div>';
+  }
+
+  // Recent Activity — fifth .card
+  const activityCard = screen.querySelectorAll('.card')[4];
+  if (activityCard) {
+    // Pull recent activity from the loaded deals (skip — load separately)
+    const list = activityCard.querySelector('.cb .alist') || activityCard.querySelector('.cb');
+    if (list) list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px">Activity will appear here as deals progress.</div>';
   }
 }
 
