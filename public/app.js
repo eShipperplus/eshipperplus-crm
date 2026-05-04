@@ -5,7 +5,8 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+  getRedirectResult, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // Firebase web config — safe to expose; security is enforced server-side via Admin SDK
@@ -84,14 +85,23 @@ function attachSignInHandler() {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     setAuthError('');
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: 'eshipperplus.com' }); // restrict to workspace domain
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ hd: 'eshipperplus.com' }); // restrict to workspace domain
       await signInWithPopup(fbAuth, provider);
     } catch (err) {
-      setAuthError(err.message);
+      // Popup blocked / closed / extension interference → fall back to full-page redirect
+      if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request']
+            .includes(err.code)) {
+        await signInWithRedirect(fbAuth, provider);
+      } else {
+        setAuthError(err.message);
+      }
     }
   });
+
+  // Handle the redirect-flow return trip (page reloads with the auth result)
+  getRedirectResult(fbAuth).catch(err => setAuthError(err.message));
 }
 
 // ─── UI adaptation by role ───────────────────────────────────────────────────
