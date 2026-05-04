@@ -90,6 +90,9 @@ jobs:
             --quiet
 
       - name: Schedule inactivity cron (Cloud Scheduler → /cron/inactivity-sweep)
+        # Non-fatal: if Cloud Scheduler isn't set up (App Engine region missing, etc.),
+        # the rest of the deploy still goes green. Set up the cron manually if needed.
+        continue-on-error: true
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
