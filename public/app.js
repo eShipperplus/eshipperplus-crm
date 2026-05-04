@@ -158,6 +158,7 @@ async function bootAppData() {
     wireOnboardingChecklist();
     wireTopBarButtons();
     wireDealEditButton();
+    setupAutoRefresh();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
   }
@@ -345,15 +346,33 @@ function wireKanbanDragDrop() {
   });
 }
 
-async function refreshPipeline() {
-  const [deals, dash] = await Promise.all([api('/api/deals'), api('/api/dashboard')]);
-  window.__crmState.deals = deals;
-  window.__crmState.dash = dash;
-  renderPipeline(deals);
-  renderLeadsTable(deals);
-  renderDashboard(dash);
-  updateSidebarBadges(deals, window.__crmState.notifs);
+// Single source of truth for "something changed, re-render everything".
+// Called after every mutation (lead created, stage moved, etc.) plus on a
+// 30s interval and when the tab regains focus, so data never goes stale.
+async function refreshAll({ silent = false } = {}) {
+  try {
+    const [deals, dash, notifs, users] = await Promise.all([
+      api('/api/deals'),
+      api('/api/dashboard'),
+      api('/api/notifications'),
+      api('/api/users'),
+    ]);
+    window.__crmState.deals = deals;
+    window.__crmState.dash = dash;
+    window.__crmState.notifs = notifs;
+    window.__crmState.users = users;
+    renderDashboard(dash);
+    renderPipeline(deals);
+    renderLeadsTable(deals);
+    renderNotifications(notifs);
+    renderUsers(users);
+    updateSidebarBadges(deals, notifs);
+  } catch (err) {
+    if (!silent) toast('Refresh failed: ' + err.message, 'error');
+  }
 }
+// Backward-compat alias for the old name used in many handlers
+const refreshPipeline = refreshAll;
 
 // ─── Leads table render ──────────────────────────────────────────────────────
 function renderLeadsTable(deals) {
@@ -973,6 +992,28 @@ function wireDealEditButton() {
         inputs.forEach(i => i.disabled = true);
       } catch (err) { toast(err.message, 'error'); }
     };
+  });
+}
+
+// ─── Auto-refresh ────────────────────────────────────────────────────────────
+// Three triggers keep data fresh without per-action wiring:
+//   1. After every successful mutation — handlers call refreshAll() directly.
+//   2. Every 30s on a background interval (silent — no error toasts).
+//   3. When the tab regains focus (visibility change).
+let _autoRefreshTimer = null;
+function setupAutoRefresh() {
+  if (_autoRefreshTimer) return; // already wired
+  _autoRefreshTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') refreshAll({ silent: true });
+  }, 30_000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshAll({ silent: true });
+  });
+  // Also refresh whenever the user clicks a sidebar nav item (Dashboard,
+  // Pipeline, Leads, Notifications, User Management) — they expect the
+  // screen they're switching to to be current.
+  document.querySelectorAll('#sb .ni').forEach(ni => {
+    ni.addEventListener('click', () => refreshAll({ silent: true }));
   });
 }
 
