@@ -1195,49 +1195,18 @@ textarea.fi{resize:vertical;min-height:68px}
     <!-- ═══ USER MANAGEMENT ═══ -->
     <div class="screen" id="s-users">
       <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:12px;color:var(--text2)">5 active users · Admin access only</div>
+        <div id="users-count" style="font-size:12px;color:var(--text2)">— users · Admin access only</div>
         <button class="btn btn-p btn-sm" onclick="document.getElementById('user-modal').style.display='flex'">+ Invite User</button>
       </div>
       <div class="card" style="margin-bottom:16px">
         <div class="ch"><span class="ct">Active Users</span><span class="cs">Google SSO · Firebase Auth</span></div>
         <table class="dt">
-          <tr><th>Name</th><th>Email</th><th>Role</th><th>Last Login</th><th>Status</th><th>Actions</th></tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--purple)">AM</div><strong>Ahmed D.</strong></div></td>
-            <td>ahmed@eshipperplus.com</td><td><span class="pill p-won" style="background:#eef0f8;color:var(--purple)">Admin</span></td>
-            <td>Today, 9:02 AM</td><td><span class="pill p-won">Active</span></td>
-            <td><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button></td>
-          </tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#e0832a">SK</div>Sara K.</div></td>
-            <td>sara.k@eshipperplus.com</td><td><span class="pill p-qual">Sales Rep</span></td>
-            <td>Today, 8:45 AM</td><td><span class="pill p-won">Active</span></td>
-            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
-          </tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#2ba877">JT</div>James T.</div></td>
-            <td>james.t@eshipperplus.com</td><td><span class="pill p-qual">Sales Rep</span></td>
-            <td>Yesterday</td><td><span class="pill p-won">Active</span></td>
-            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
-          </tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--teal)">KW</div>Kim W.</div></td>
-            <td>kim.w@eshipperplus.com</td><td><span class="pill p-ob">Onboarding Mgr</span></td>
-            <td>Today, 10:15 AM</td><td><span class="pill p-won">Active</span></td>
-            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
-          </tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:#5258b0">DK</div>Divyanka K.</div></td>
-            <td>divyanka.k@eshipperplus.com</td><td><span class="pill" style="background:#f0f0fa;color:#5050aa">Finance / Mgmt</span></td>
-            <td>2 days ago</td><td><span class="pill p-won">Active</span></td>
-            <td style="display:flex;gap:5px"><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button><button class="btn btn-sm" style="padding:3px 9px;font-size:10px;color:var(--danger)">Deactivate</button></td>
-          </tr>
-          <tr>
-            <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:26px;height:26px;font-size:10px;background:var(--grey-dk)">AA</div><span style="color:var(--text3)">Aamer A.</span></div></td>
-            <td style="color:var(--text3)">aamer@eshipperplus.com</td><td><span class="pill p-won" style="background:#eef0f8;color:var(--purple)">Admin</span></td>
-            <td style="color:var(--text3)">Today, 7:30 AM</td><td><span class="pill p-won">Active</span></td>
-            <td><button class="btn btn-sm" style="padding:3px 9px;font-size:10px">Edit</button></td>
-          </tr>
+          <thead>
+            <tr><th>Name</th><th>Email</th><th>Role</th><th>Last Seen</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3)">Loading…</td></tr>
+          </tbody>
         </table>
       </div>
       <div class="card" style="max-width:800px">
@@ -1266,16 +1235,49 @@ textarea.fi{resize:vertical;min-height:68px}
           <button class="btn btn-sm" onclick="document.getElementById('user-modal').style.display='none'" style="padding:3px 8px">✕</button>
         </div>
         <div style="padding:20px">
-          <div class="fg" style="margin-bottom:12px"><label class="fl2">Full Name</label><input class="fi" placeholder="e.g. Jordan Smith"></div>
-          <div class="fg" style="margin-bottom:12px"><label class="fl2">Email Address</label><input class="fi" type="email" placeholder="user@eshipperplus.com"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Full Name</label><input class="fi" id="invite-name" placeholder="e.g. Jordan Smith"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Email Address</label><input class="fi" id="invite-email" type="email" placeholder="user@eshipperplus.com"></div>
           <div class="fg" style="margin-bottom:16px">
             <label class="fl2">Assign Role</label>
-            <select class="fsel"><option>— Select a role —</option><option>Admin</option><option>Sales Rep</option><option>Onboarding Manager</option><option>Finance / Management</option></select>
+            <select class="fsel" id="invite-role">
+              <option value="rep">Sales Rep</option>
+              <option value="admin">Admin</option>
+              <option value="onboarding">Onboarding Manager</option>
+              <option value="finance">Finance / Management</option>
+            </select>
           </div>
-          <div style="background:var(--surface);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:16px">ℹ️ An invitation will be sent via Google Auth (SSO). User sets password on first login.</div>
+          <div style="background:var(--surface);border-radius:6px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:16px">ℹ️ Email is added to the invite list. The user gets their assigned role on their first Google sign-in.</div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-sm" onclick="document.getElementById('user-modal').style.display='none'">Cancel</button>
-            <button class="btn btn-p btn-sm" onclick="document.getElementById('user-modal').style.display='none'">Send Invitation</button>
+            <button class="btn btn-p btn-sm" id="invite-submit-btn">Send Invitation</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT USER MODAL -->
+    <div id="edit-user-modal" style="display:none;position:fixed;inset:0;background:rgba(26,28,58,.45);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:var(--white);border-radius:var(--r);width:420px;box-shadow:0 8px 40px rgba(52,54,138,.18);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:600">Edit User</span>
+          <button class="btn btn-sm" onclick="document.getElementById('edit-user-modal').style.display='none'" style="padding:3px 8px">✕</button>
+        </div>
+        <div style="padding:20px">
+          <input type="hidden" id="edit-user-uid">
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Display Name</label><input class="fi" id="edit-user-name"></div>
+          <div class="fg" style="margin-bottom:12px"><label class="fl2">Email</label><input class="fi" id="edit-user-email" disabled style="opacity:.6"></div>
+          <div class="fg" style="margin-bottom:16px">
+            <label class="fl2">Role</label>
+            <select class="fsel" id="edit-user-role">
+              <option value="rep">Sales Rep</option>
+              <option value="admin">Admin</option>
+              <option value="onboarding">Onboarding Manager</option>
+              <option value="finance">Finance / Management</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-sm" onclick="document.getElementById('edit-user-modal').style.display='none'">Cancel</button>
+            <button class="btn btn-p btn-sm" id="edit-user-submit-btn">Save Changes</button>
           </div>
         </div>
       </div>

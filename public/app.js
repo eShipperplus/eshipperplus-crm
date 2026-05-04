@@ -147,11 +147,13 @@ async function bootAppData() {
     renderPipeline(deals);
     renderLeadsTable(deals);
     renderNotifications(notifs);
+    renderUsers(users);
     updateSidebarBadges(deals, notifs);
     wireDealDetailHandlers();
     wireManualLeadForm();
     wirePartnerRepUpload();
     wireNotificationRulesForm();
+    wireUserManagement();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
   }
@@ -733,6 +735,109 @@ function wirePartnerRepUpload() {
       } catch (err) { toast(err.message, 'error'); }
     });
   });
+}
+
+// ─── User Management ─────────────────────────────────────────────────────────
+function renderUsers(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  if (!users || !users.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text3)">No users yet</td></tr>';
+  } else {
+    const roleColor = { admin: 'var(--purple)', rep: '#e0832a', onboarding: 'var(--teal)', finance: '#5258b0' };
+    const roleLabel = { admin: 'Admin', rep: 'Sales Rep', onboarding: 'Onboarding Mgr', finance: 'Finance / Mgmt' };
+    tbody.innerHTML = users.map(u => {
+      const isMe = u.uid === currentUser.uid;
+      const initials = (u.displayName || u.email).split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+      const color = pickOwnerColor(u.uid || u.email);
+      return `
+        <tr data-uid="${esc(u.uid)}">
+          <td><div style="display:flex;align-items:center;gap:8px">
+            <div class="av" style="width:26px;height:26px;font-size:10px;background:${color}">${esc(initials)}</div>
+            <strong>${esc(u.displayName || u.email)}</strong>${isMe ? ' <span style="color:var(--text3);font-size:10px">(you)</span>' : ''}
+          </div></td>
+          <td>${esc(u.email)}</td>
+          <td><span class="pill" style="background:#f0f0fa;color:${roleColor[u.role] || 'var(--text3)'}">${esc(roleLabel[u.role] || u.role)}</span></td>
+          <td style="font-size:11px;color:var(--text3)">${u.lastSeen ? relativeTime(u.lastSeen) : '—'}</td>
+          <td style="display:flex;gap:5px">
+            <button class="btn btn-sm" style="padding:3px 9px;font-size:10px" onclick="window.editUser('${esc(u.uid)}')">Edit</button>
+            ${isMe ? '' : `<button class="btn btn-sm" style="padding:3px 9px;font-size:10px;background:var(--danger-bg);color:var(--danger);border-color:var(--danger)" onclick="window.deleteUser('${esc(u.uid)}','${esc(u.displayName || u.email)}')">Delete</button>`}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+  const count = document.getElementById('users-count');
+  if (count) count.textContent = `${users.length} user${users.length === 1 ? '' : 's'} · Admin access only`;
+}
+
+window.editUser = (uid) => {
+  const u = (window.__crmState.users || []).find(x => x.uid === uid);
+  if (!u) return;
+  document.getElementById('edit-user-uid').value = uid;
+  document.getElementById('edit-user-name').value = u.displayName || '';
+  document.getElementById('edit-user-email').value = u.email;
+  document.getElementById('edit-user-role').value = u.role;
+  document.getElementById('edit-user-modal').style.display = 'flex';
+};
+
+window.deleteUser = async (uid, name) => {
+  if (!confirm(`Delete user "${name}"? This removes them from the CRM and revokes their sign-in. This cannot be undone.`)) return;
+  try {
+    await api(`/api/users/${uid}`, { method: 'DELETE' });
+    toast(`Deleted ${name}`, 'ok');
+    const users = await api('/api/users');
+    window.__crmState.users = users;
+    renderUsers(users);
+  } catch (err) { toast(err.message, 'error'); }
+};
+
+function wireUserManagement() {
+  // Invite User submit
+  const inviteBtn = document.getElementById('invite-submit-btn');
+  if (inviteBtn && !inviteBtn.dataset.wired) {
+    inviteBtn.dataset.wired = '1';
+    inviteBtn.onclick = async () => {
+      const name = document.getElementById('invite-name').value.trim();
+      const email = document.getElementById('invite-email').value.trim().toLowerCase();
+      const role = document.getElementById('invite-role').value;
+      if (!email) return toast('Email is required', 'warn');
+      try {
+        await api('/api/users/invite', {
+          method: 'POST',
+          body: JSON.stringify({ email, displayName: name, role }),
+        });
+        document.getElementById('user-modal').style.display = 'none';
+        document.getElementById('invite-name').value = '';
+        document.getElementById('invite-email').value = '';
+        toast(`Invited ${email} as ${role}`, 'ok');
+        const users = await api('/api/users');
+        window.__crmState.users = users;
+        renderUsers(users);
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  }
+
+  // Edit User submit
+  const editBtn = document.getElementById('edit-user-submit-btn');
+  if (editBtn && !editBtn.dataset.wired) {
+    editBtn.dataset.wired = '1';
+    editBtn.onclick = async () => {
+      const uid = document.getElementById('edit-user-uid').value;
+      const displayName = document.getElementById('edit-user-name').value.trim();
+      const role = document.getElementById('edit-user-role').value;
+      try {
+        await api(`/api/users/${uid}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ displayName, role }),
+        });
+        document.getElementById('edit-user-modal').style.display = 'none';
+        toast('User updated', 'ok');
+        const users = await api('/api/users');
+        window.__crmState.users = users;
+        renderUsers(users);
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  }
 }
 
 function wireNotificationRulesForm() {
