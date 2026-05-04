@@ -154,6 +154,10 @@ async function bootAppData() {
     wirePartnerRepUpload();
     wireNotificationRulesForm();
     wireUserManagement();
+    wireExportCsv();
+    wireOnboardingChecklist();
+    wireTopBarButtons();
+    wireDealEditButton();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
   }
@@ -342,10 +346,13 @@ function wireKanbanDragDrop() {
 }
 
 async function refreshPipeline() {
-  const deals = await api('/api/deals');
+  const [deals, dash] = await Promise.all([api('/api/deals'), api('/api/dashboard')]);
   window.__crmState.deals = deals;
+  window.__crmState.dash = dash;
   renderPipeline(deals);
   renderLeadsTable(deals);
+  renderDashboard(dash);
+  updateSidebarBadges(deals, window.__crmState.notifs);
 }
 
 // ─── Leads table render ──────────────────────────────────────────────────────
@@ -437,13 +444,16 @@ window.markAllRead = async () => {
 };
 
 function updateSidebarBadges(deals, notifs) {
-  const activeDeals = (deals || []).filter(d => !['Closed Won', 'Closed Lost'].includes(d.stage) && !d.discarded && !d.mergedInto);
-  const newLeads = (deals || []).filter(d => d.stage === 'New' && !d.discarded).length;
+  const visibleDeals = (deals || []).filter(d => !d.discarded && !d.mergedInto);
+  const activeDeals = visibleDeals.filter(d => !['Closed Won', 'Closed Lost'].includes(d.stage));
   const unread = (notifs || []).filter(n => !n.read).length;
+  // Sidebar nav order from index.html:
+  //   [0] Pipeline (active deals)
+  //   [1] Leads (all visible deals — same count as the leads table)
+  //   [2] Notifications (unread)
   const badges = document.querySelectorAll('#sb .nbadge');
-  // mockup order: Pipeline=[0], Leads=[1], Notifications=[2]
   if (badges[0]) badges[0].textContent = activeDeals.length;
-  if (badges[1]) badges[1].textContent = newLeads;
+  if (badges[1]) badges[1].textContent = visibleDeals.length;
   if (badges[2]) badges[2].textContent = unread;
 }
 
@@ -841,14 +851,129 @@ function wireUserManagement() {
 }
 
 function wireNotificationRulesForm() {
-  // Load current notification_rules settings and populate any matching inputs
   if (currentUser?.role !== 'admin') return;
+  // Load current notification_rules settings and populate any matching inputs
   api('/api/settings/notification_rules').then(cfg => {
     const repField = document.getElementById('cfg-inactivity-rep-days');
     const adminField = document.getElementById('cfg-inactivity-admin-days');
     if (repField && cfg.inactivityRepDays) repField.value = cfg.inactivityRepDays;
     if (adminField && cfg.inactivityAdminDays) adminField.value = cfg.inactivityAdminDays;
   }).catch(() => {});
+
+  // Wire Save Changes button on Notification Rules screen
+  const saveBtn = document.querySelector('#s-notif-settings .btn-p');
+  if (saveBtn && !saveBtn.dataset.wired) {
+    saveBtn.dataset.wired = '1';
+    saveBtn.onclick = async () => {
+      const repField = document.getElementById('cfg-inactivity-rep-days');
+      const adminField = document.getElementById('cfg-inactivity-admin-days');
+      const payload = {};
+      if (repField) payload.inactivityRepDays = Number(repField.value) || 3;
+      if (adminField) payload.inactivityAdminDays = Number(adminField.value) || 7;
+      try {
+        await api('/api/settings/notification_rules', {
+          method: 'PUT', body: JSON.stringify(payload),
+        });
+        toast('Notification rules saved', 'ok');
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  }
+}
+
+// ─── Export CSV (Leads) ──────────────────────────────────────────────────────
+function wireExportCsv() {
+  const btn = document.getElementById('leads-export-csv-btn');
+  if (!btn || btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.onclick = () => {
+    const deals = (window.__crmState.deals || []).filter(d => !d.discarded && !d.mergedInto);
+    if (!deals.length) return toast('No leads to export', 'warn');
+    const cols = ['companyName', 'contactName', 'contactEmail', 'contactPhone', 'industry', 'source', 'monthlyRevenue', 'arr', 'tier', 'stage', 'ownerName', 'createdAt', 'lastActivityAt'];
+    const header = cols.join(',');
+    const csvEsc = v => {
+      if (v === null || v === undefined) return '';
+      if (typeof v === 'object' && v._seconds) v = new Date(v._seconds * 1000).toISOString();
+      const s = String(v).replace(/"/g, '""');
+      return /[,"\n]/.test(s) ? `"${s}"` : s;
+    };
+    const rows = deals.map(d => cols.map(c => csvEsc(d[c])).join(','));
+    const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `eshipperplus-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast(`Exported ${deals.length} lead${deals.length === 1 ? '' : 's'}`, 'ok');
+  };
+}
+
+// ─── Onboarding checklist toggles (admin / onboarding role) ─────────────────
+function wireOnboardingChecklist() {
+  if (!['admin', 'onboarding'].includes(currentUser?.role)) return;
+  const screen = document.getElementById('s-onboarding');
+  if (!screen) return;
+  // Wire any .ob-item or .chk-item to toggle done-state and save
+  // Note: this is a generic wire — a full implementation needs to know
+  // which deal's checklist this is. For MVP, we just visually toggle.
+  screen.querySelectorAll('.ob-item, .chk-item').forEach(item => {
+    if (item.dataset.wired) return;
+    item.dataset.wired = '1';
+    item.addEventListener('click', () => {
+      item.classList.toggle('act');
+      const cb = item.querySelector('.chkb');
+      if (cb) cb.classList.toggle('ck');
+    });
+  });
+}
+
+// ─── Top-bar + New Lead button (always go to manual lead entry) ─────────────
+function wireTopBarButtons() {
+  const newLeadBtn = document.querySelector('#tb-r .btn-sm:not(.btn-p)');
+  if (newLeadBtn && !newLeadBtn.dataset.wired) {
+    newLeadBtn.dataset.wired = '1';
+    newLeadBtn.onclick = () => {
+      const navEl = document.querySelector('.ni[onclick*=manual-lead]');
+      if (typeof window.show === 'function') window.show('manual-lead', navEl);
+    };
+  }
+}
+
+// ─── Deal Detail Edit button ─────────────────────────────────────────────────
+function wireDealEditButton() {
+  // Each card has its own Edit; the main inline-edit panel is the Deal Information card.
+  // Toggle disabled state on inputs to enter "edit mode"; save persists via /api/deals/:id PATCH.
+  const screen = document.getElementById('s-deal');
+  if (!screen) return;
+  const editBtns = screen.querySelectorAll('.ch .btn-sm');
+  editBtns.forEach(btn => {
+    if (btn.dataset.wired || btn.textContent.trim() !== 'Edit') return;
+    btn.dataset.wired = '1';
+    btn.onclick = async () => {
+      const id = document.getElementById('deal-detail-id')?.value;
+      if (!id) return;
+      const card = btn.closest('.card');
+      const inputs = card.querySelectorAll('input.fi, select.fi, textarea.fi, select.fsel');
+      const isEditMode = btn.textContent === 'Save';
+      if (!isEditMode) {
+        inputs.forEach(i => i.disabled = false);
+        btn.textContent = 'Save';
+        return;
+      }
+      // Save mode — gather fields and PATCH
+      const payload = {};
+      inputs.forEach(i => {
+        const label = (i.previousElementSibling?.textContent || '').toLowerCase();
+        if (label.includes('industry')) payload.industry = i.value;
+        else if (label.includes('source') || label.includes('lead source')) payload.source = i.value;
+      });
+      try {
+        await api(`/api/deals/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+        toast('Saved', 'ok');
+        btn.textContent = 'Edit';
+        inputs.forEach(i => i.disabled = true);
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  });
 }
 
 // ─── Toast helper ────────────────────────────────────────────────────────────

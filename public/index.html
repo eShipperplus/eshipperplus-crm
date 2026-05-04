@@ -416,7 +416,7 @@ textarea.fi{resize:vertical;min-height:68px}
         <div style="font-size:12px;color:var(--text2)">24 active deals · $1.84M pipeline</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-sm">Filter</button>
-          <button class="btn btn-p btn-sm">+ New Deal</button>
+          <button class="btn btn-p btn-sm" id="pipeline-new-deal-btn" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ New Deal</button>
         </div>
       </div>
       <div class="kanban">
@@ -533,7 +533,7 @@ textarea.fi{resize:vertical;min-height:68px}
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <span id="lead-count" style="font-size:11px;color:var(--text3)">7 leads</span>
-          <button class="btn btn-sm">Export CSV</button>
+          <button class="btn btn-sm" id="leads-export-csv-btn">Export CSV</button>
           <button class="btn btn-p btn-sm" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ Add Lead</button>
         </div>
       </div>
