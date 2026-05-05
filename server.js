@@ -169,11 +169,28 @@ app.get('/api/users', requireAuth, async (req, res) => {
 app.post('/api/users/invite', requireAuth, requireRole('admin'), async (req, res) => {
   const { email, displayName, role } = req.body || {};
   if (!email || !ROLES.includes(role)) return res.status(400).json({ error: 'Invalid payload' });
-  await db.collection('crm_invites').doc(email.toLowerCase()).set({
-    email: email.toLowerCase(), displayName: displayName || email,
+  const lowerEmail = email.toLowerCase();
+  await db.collection('crm_invites').doc(lowerEmail).set({
+    email: lowerEmail, displayName: displayName || email,
     role, invitedBy: req.uid, invitedAt: Timestamp.now(),
   });
-  res.json({ ok: true });
+  // Send the actual invitation email so the invitee knows to sign in
+  let emailResult = { sent: false };
+  try {
+    const emailService = require('./services/email');
+    emailResult = await emailService.send({
+      to: lowerEmail,
+      ...emailService.inviteEmail({
+        inviteeName: displayName,
+        inviteeEmail: lowerEmail,
+        role,
+        invitedByName: req.user.displayName,
+      }),
+    });
+  } catch (err) {
+    console.error('Invite email failed (invite was still saved):', err.message);
+  }
+  res.json({ ok: true, emailSent: emailResult.sent || emailResult.dryRun, dryRun: emailResult.dryRun });
 });
 
 app.patch('/api/users/:uid', requireAuth, requireRole('admin'), async (req, res) => {

@@ -211,6 +211,45 @@ describe('reengagementDue (R-25)', () => {
   });
 });
 
+describe('inviteEmail (User Management)', () => {
+  test('includes invitee name, role, and inviter', () => {
+    const r = email.inviteEmail({
+      inviteeName: 'Aamer A.',
+      inviteeEmail: 'aamer@eshipperplus.com',
+      role: 'admin',
+      invitedByName: 'Ahmed D.',
+    });
+    expect(r.subject).toContain('eShipper Plus CRM');
+    expect(r.html).toContain('Aamer A.');
+    expect(r.html).toContain('aamer@eshipperplus.com');
+    expect(r.html).toContain('Admin');
+    expect(r.html).toContain('Ahmed D.');
+  });
+
+  test('translates internal role values to friendly labels', () => {
+    expect(email.inviteEmail({ inviteeEmail: 'a@b.com', role: 'rep' }).html).toContain('Sales Rep');
+    expect(email.inviteEmail({ inviteeEmail: 'a@b.com', role: 'onboarding' }).html).toContain('Onboarding Manager');
+    expect(email.inviteEmail({ inviteeEmail: 'a@b.com', role: 'finance' }).html).toContain('Finance / Management');
+  });
+
+  test('falls back to "there" when name is missing', () => {
+    const r = email.inviteEmail({ inviteeEmail: 'a@b.com', role: 'rep' });
+    expect(r.html).toContain('Hi there');
+  });
+
+  test('XSS-safe in inviteeName and inviter name', () => {
+    const r = email.inviteEmail({
+      inviteeName: '<script>alert(1)</script>',
+      inviteeEmail: 'a@b.com',
+      role: 'rep',
+      invitedByName: '<img src=x>',
+    });
+    expect(r.html).not.toContain('<script>');
+    expect(r.html).not.toContain('<img src=x>');
+    expect(r.html).toContain('&lt;script&gt;');
+  });
+});
+
 describe('send() — top-level', () => {
   test('skips with no recipients', async () => {
     const r = await email.send({ to: [], subject: 'X', html: '<p>X</p>' });

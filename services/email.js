@@ -224,6 +224,28 @@ function reengagementDue({ deal }) {
   };
 }
 
+function inviteEmail({ inviteeName, inviteeEmail, role, invitedByName }) {
+  const roleLabel = { admin: 'Admin', rep: 'Sales Rep', onboarding: 'Onboarding Manager', finance: 'Finance / Management' }[role] || role;
+  return {
+    subject: `You've been invited to eShipper Plus CRM`,
+    html: `
+      <p>Hi ${esc(inviteeName) || 'there'},</p>
+      <p><strong>${esc(invitedByName) || 'An admin'}</strong> has invited you to join the
+      <strong>eShipper Plus CRM</strong> as <strong>${esc(roleLabel)}</strong>.</p>
+      <p>To get started, sign in at the link below using your <strong>${esc(inviteeEmail)}</strong>
+      Google Workspace account:</p>
+      <p style="margin:24px 0">
+        <a href="${APP_URL}" style="display:inline-block;background:#34368a;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:500">Sign in to eShipper Plus CRM →</a>
+      </p>
+      <p style="font-size:12px;color:#5a5d7e">Or copy and paste this URL into your browser:<br>
+      <span style="font-family:monospace">${APP_URL}</span></p>
+      <p style="font-size:12px;color:#5a5d7e">Your role and permissions will be assigned automatically on your first sign-in.</p>
+      <hr style="border:none;border-top:1px solid #dde0f0;margin:24px 0">
+      <p style="font-size:11px;color:#9496b4">If you weren't expecting this invitation, you can safely ignore this email.</p>
+    `,
+  };
+}
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 function esc(s) {
@@ -260,4 +282,5 @@ module.exports = {
   onboardingAdmin,
   repReassigned,
   reengagementDue,
+  inviteEmail,
 };

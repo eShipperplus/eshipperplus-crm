@@ -836,14 +836,20 @@ function wireUserManagement() {
       const role = document.getElementById('invite-role').value;
       if (!email) return toast('Email is required', 'warn');
       try {
-        await api('/api/users/invite', {
+        const result = await api('/api/users/invite', {
           method: 'POST',
           body: JSON.stringify({ email, displayName: name, role }),
         });
         document.getElementById('user-modal').style.display = 'none';
         document.getElementById('invite-name').value = '';
         document.getElementById('invite-email').value = '';
-        toast(`Invited ${email} as ${role}`, 'ok');
+        if (result.emailSent && !result.dryRun) {
+          toast(`Invitation email sent to ${email}`, 'ok');
+        } else if (result.dryRun) {
+          toast(`${email} invited (email skipped — SMTP not configured)`, 'warn');
+        } else {
+          toast(`${email} invited (email failed to send — check server logs)`, 'warn');
+        }
         const users = await api('/api/users');
         window.__crmState.users = users;
         renderUsers(users);
