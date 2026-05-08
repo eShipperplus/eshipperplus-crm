@@ -39,6 +39,7 @@ const mockEmailService = {
   onboardingAdmin: jest.fn(() => ({ subject: 'oa', html: '' })),
   repReassigned: jest.fn(() => ({ subject: 'rr', html: '' })),
   reengagementDue: jest.fn(() => ({ subject: 're', html: '' })),
+  inviteEmail: jest.fn(() => ({ subject: 'inv', html: '' })),
 };
 jest.mock('../services/email', () => mockEmailService);
 jest.mock('../services/drive', () => ({ ensureClientFolder: jest.fn().mockResolvedValue({ id: null, dryRun: true }) }));
@@ -326,7 +327,10 @@ describe('Deals CRUD', () => {
 describe('Stage transitions', () => {
   test('rep can move own deal stage', async () => {
     const headers = asUser('u1', 'rep');
-    seedDeals([{ id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X' }]);
+    seedDeals([{
+      id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X',
+      services: [{ name: 'Warehousing', monthlyRevenue: 10000 }], // 2.C requires services to advance
+    }]);
     const res = await request(app).post('/api/deals/d1/stage').set(headers).send({
       toStage: 'Qualified',
     });
@@ -391,6 +395,39 @@ describe('Stage transitions', () => {
       toStage: 'NonexistentStage',
     });
     expect(res.status).toBe(400);
+  });
+
+  test('cannot advance past New without at least one priced service (2.C)', async () => {
+    const headers = asUser('admin1', 'admin');
+    seedDeals([{ id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X', services: [] }]);
+    const res = await request(app).post('/api/deals/d1/stage').set(headers).send({
+      toStage: 'Qualified',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/service/i);
+  });
+
+  test('CAN advance past New with a priced service', async () => {
+    const headers = asUser('admin1', 'admin');
+    seedDeals([{
+      id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X',
+      services: [{ name: 'Warehousing', monthlyRevenue: 10000 }],
+    }]);
+    const res = await request(app).post('/api/deals/d1/stage').set(headers).send({
+      toStage: 'Qualified',
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test('Closed Lost from New is allowed even with no services (2.C exemption)', async () => {
+    const headers = asUser('admin1', 'admin');
+    seedDeals([{ id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X', services: [] }]);
+    const res = await request(app).post('/api/deals/d1/stage').set(headers).send({
+      toStage: 'Closed Lost',
+      lossReason: 'No response',
+      reengagementDate: '2026-12-01',
+    });
+    expect(res.status).toBe(200);
   });
 });
 

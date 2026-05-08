@@ -414,10 +414,21 @@ function dealCardHtml(d) {
   const ownerColor = pickOwnerColor(d.ownerUid || d.ownerName || '');
   const wonClass = d.stage === 'Closed Won' ? ' won' : '';
   const monthly = d.monthlyRevenue || 0;
+  // 2.B — days in stage + stale flag (red dot if 7+ days since last activity)
+  const lastActivityTs = d.lastActivityAt?._seconds || d.lastActivityAt?.seconds;
+  const daysIdle = lastActivityTs ? Math.floor((Date.now() / 1000 - lastActivityTs) / 86400) : null;
+  const stale = daysIdle !== null && daysIdle >= 7 && !['Closed Won', 'Closed Lost', 'Onboarding'].includes(d.stage);
+  const idleBadge = daysIdle !== null
+    ? `<span style="font-size:9.5px;color:${stale ? 'var(--danger)' : 'var(--text3)'};margin-left:4px" title="${esc(stale ? 'Stale — no activity in 7+ days' : 'Days since last activity')}">${stale ? '🔴 ' : ''}${daysIdle}d</span>`
+    : '';
+  // Approval pill on card if approval is pending
+  const approvalPill = d.approvalStatus === 'pending'
+    ? '<span style="font-size:9px;background:#fff4e6;color:#7a4a00;border:1px solid #e0832a;border-radius:3px;padding:1px 5px;margin-left:4px">🔐 Pending</span>'
+    : '';
   return `
     <div class="kcard${wonClass}" draggable="true" data-deal-id="${esc(d.id)}" onclick="window.openDeal('${esc(d.id)}')">
-      <div class="kcard-n">${esc(d.companyName)}${d.duplicateFlag ? ' <span style="color:#cc3d3d" title="Possible duplicate">⚠</span>' : ''}</div>
-      <div class="kcard-m">${esc((d.services && d.services[0]?.name) || 'Services TBD')} · ${esc(d.source || '')}</div>
+      <div class="kcard-n">${esc(d.companyName)}${d.duplicateFlag ? ' <span style="color:#cc3d3d" title="Possible duplicate">⚠</span>' : ''}${approvalPill}</div>
+      <div class="kcard-m">${esc((d.services && d.services[0]?.name) || 'Services TBD')} · ${esc(d.source || '')}${idleBadge}</div>
       <div class="kcard-v" style="${monthly === 0 ? 'color:var(--text3)' : ''}">${fmtMonthly(monthly)}</div>
       <div class="kcard-o"><div class="odot" style="background:${ownerColor}"></div>${esc(d.ownerName || 'Unassigned')}</div>
     </div>`;
@@ -517,8 +528,10 @@ function renderLeadsTable(deals) {
   const visible = deals.filter(d => !d.discarded && !d.mergedInto);
   tbody.innerHTML = visible.map(d => {
     const monthly = d.monthlyRevenue || 0;
+    // 3.E — pack hidden searchable fields (email, phone) into the row for the search filter
+    const hidden = [d.contactEmail, d.contactPhone].filter(Boolean).map(esc).join(' ');
     return `
-    <tr onclick="window.openDeal('${esc(d.id)}')">
+    <tr onclick="window.openDeal('${esc(d.id)}')" data-search="${hidden}">
       <td><strong>${esc(d.companyName)}</strong>${d.duplicateFlag ? ' <span class="dup-badge">⚠ Dup</span>' : ''}</td>
       <td>${esc(d.contactName) || '<span style="color:var(--text3)">—</span>'}</td>
       <td>${esc(d.industry) || '<span style="color:var(--text3)">—</span>'}</td>
@@ -665,8 +678,26 @@ function renderDealDetail(d, activity) {
     switch (key) {
       case 'company':       dv.textContent = d.companyName || '—'; break;
       case 'contact':       dv.textContent = d.contactName || '—'; break;
-      case 'email':         dv.textContent = d.contactEmail || '—'; break;
-      case 'phone':         dv.textContent = fmtPhone(d.contactPhone); break;
+      case 'email': {
+        // 4.E — clickable mailto link
+        if (d.contactEmail) {
+          dv.innerHTML = `<a href="mailto:${esc(d.contactEmail)}" style="color:var(--purple);text-decoration:none">${esc(d.contactEmail)}</a>`;
+        } else {
+          dv.textContent = '—';
+        }
+        break;
+      }
+      case 'phone': {
+        // 4.E — clickable tel link
+        const formatted = fmtPhone(d.contactPhone);
+        if (d.contactPhone && formatted !== '—') {
+          const digits = String(d.contactPhone).replace(/\D/g, '');
+          dv.innerHTML = `<a href="tel:+1${esc(digits)}" style="color:var(--purple);text-decoration:none">${esc(formatted)}</a>`;
+        } else {
+          dv.textContent = '—';
+        }
+        break;
+      }
       case 'industry': {
         const sel = dv.querySelector('select');
         if (sel) sel.value = d.industry || '';
@@ -726,6 +757,81 @@ function renderDealDetail(d, activity) {
 
   // Duplicate review controls for admins with a flag set
   renderDuplicateBanner(d);
+
+  // Approval workflow banner (4.M)
+  renderApprovalBanner(d);
+}
+
+// ─── Approval banner (4.M) ───────────────────────────────────────────────────
+// Surfaces approval state. Admins see Approve/Reject when status='pending'.
+// Reps see "Pending approval" or "Rejected — rework needed" with reason.
+function renderApprovalBanner(d) {
+  const screen = document.getElementById('s-deal');
+  const existing = document.getElementById('approval-banner');
+  if (existing) existing.remove();
+
+  const status = d.approvalStatus;
+  if (!status || status === 'approved') return; // nothing to show
+
+  const banner = document.createElement('div');
+  banner.id = 'approval-banner';
+  banner.style.cssText = 'border-radius:6px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px';
+
+  if (status === 'pending') {
+    const isAdmin = currentUser?.role === 'admin';
+    banner.style.background = '#fff4e6';
+    banner.style.border = '1px solid #e0832a';
+    banner.style.color = '#7a4a00';
+    banner.innerHTML = `
+      <div>🔐 <strong>Approval pending</strong> — proposal needs admin approval before sending to client.
+      ${d.approvalRequestedAt ? `<span style="color:#9a6300">Requested ${esc(relativeTime(d.approvalRequestedAt))}</span>` : ''}</div>
+      ${isAdmin ? `
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" id="approval-reject-btn" style="background:var(--danger-bg);color:var(--danger);border-color:var(--danger)">Reject</button>
+          <button class="btn btn-p btn-sm" id="approval-approve-btn">Approve</button>
+        </div>` : '<span style="color:#9a6300;font-style:italic">Awaiting admin</span>'}`;
+  } else if (status === 'rejected') {
+    banner.style.background = '#fdeaea';
+    banner.style.border = '1px solid #cc3d3d';
+    banner.style.color = '#992020';
+    banner.innerHTML = `
+      <div>❌ <strong>Proposal rejected</strong> — rework needed.
+      ${d.rejectionReason ? `<div style="font-style:italic;margin-top:3px">"${esc(d.rejectionReason)}"</div>` : ''}</div>`;
+  }
+
+  // Inject just below the rep-bar (the bar above Deal Information card)
+  const dealContent = document.getElementById('deal-content');
+  const insertBefore = dealContent?.querySelector('div[style*="grid-template-columns:1fr 1fr"]');
+  if (insertBefore && insertBefore.parentElement) {
+    insertBefore.parentElement.insertBefore(banner, insertBefore);
+  }
+
+  // Wire admin Approve/Reject buttons
+  document.getElementById('approval-approve-btn')?.addEventListener('click', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    if (!id) return;
+    try {
+      await api(`/api/deals/${id}/approval`, { method: 'POST', body: JSON.stringify({ approved: true }) });
+      toast('Proposal approved · deal advanced to Proposal Sent', 'ok');
+      await refreshAll();
+      openDeal(id);
+    } catch (err) { toast('Approve failed: ' + err.message, 'error'); }
+  });
+  document.getElementById('approval-reject-btn')?.addEventListener('click', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    if (!id) return;
+    const reason = prompt('Rework notes for the rep (will be emailed and shown on the deal):');
+    if (reason === null) return;
+    try {
+      await api(`/api/deals/${id}/approval`, {
+        method: 'POST',
+        body: JSON.stringify({ approved: false, reason: reason.trim() }),
+      });
+      toast('Proposal rejected · rep notified', 'ok');
+      await refreshAll();
+      openDeal(id);
+    } catch (err) { toast('Reject failed: ' + err.message, 'error'); }
+  });
 }
 
 function activityTitle(a) {
@@ -1275,13 +1381,30 @@ function wireNotificationRulesForm() {
 }
 
 // ─── Export CSV (Leads) ──────────────────────────────────────────────────────
+// 3.H — exports the FILTERED view (current search + stage + source + owner
+// filters applied), not the entire deal set. Walks the DOM to find rows
+// currently visible after filterLeads() runs.
 function wireExportCsv() {
   const btn = document.getElementById('leads-export-csv-btn');
   if (!btn || btn.dataset.wired) return;
   btn.dataset.wired = '1';
   btn.onclick = () => {
-    const deals = (window.__crmState.deals || []).filter(d => !d.discarded && !d.mergedInto);
-    if (!deals.length) return toast('No leads to export', 'warn');
+    // Find currently-visible rows (filterLeads adds 'hidden-row' class for non-matches)
+    const tbody = document.getElementById('leads-tbody');
+    const allRows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
+    const visibleRows = allRows.filter(r => !r.classList.contains('hidden-row') && r.style.display !== 'none');
+
+    // Map back to deal objects
+    const allDeals = (window.__crmState.deals || []).filter(d => !d.discarded && !d.mergedInto);
+    const visibleIds = new Set();
+    visibleRows.forEach(row => {
+      const m = row.getAttribute('onclick')?.match(/openDeal\('([^']+)'\)/);
+      if (m) visibleIds.add(m[1]);
+    });
+    const deals = allDeals.filter(d => visibleIds.has(d.id));
+
+    if (!deals.length) return toast('No leads matching current filters', 'warn');
+
     const cols = ['companyName', 'contactName', 'contactEmail', 'contactPhone', 'industry', 'source', 'monthlyRevenue', 'arr', 'tier', 'stage', 'ownerName', 'createdAt', 'lastActivityAt'];
     const header = cols.join(',');
     const csvEsc = v => {
@@ -1297,7 +1420,8 @@ function wireExportCsv() {
     a.href = url; a.download = `eshipperplus-leads-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    toast(`Exported ${deals.length} lead${deals.length === 1 ? '' : 's'}`, 'ok');
+    const totalCount = (window.__crmState.deals || []).length;
+    toast(`Exported ${deals.length} of ${totalCount} lead${totalCount === 1 ? '' : 's'} (filtered view)`, 'ok');
   };
 }
 

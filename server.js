@@ -307,6 +307,18 @@ app.post('/api/deals/:id/stage', requireAuth, requireRole('admin', 'rep'), async
     }
   }
 
+  // 2.C — Services must be defined before deal can leave New stage.
+  // Closed Lost is exempt (a deal can be lost at any stage including New).
+  if (deal.stage === 'New' && toStage !== 'Closed Lost' && toStage !== 'New') {
+    const services = deal.services || [];
+    const hasValue = services.some(s => Number(s.monthlyRevenue) > 0);
+    if (!services.length || !hasValue) {
+      return res.status(400).json({
+        error: 'Add at least one service with monthly revenue before advancing past New stage',
+      });
+    }
+  }
+
   // R-12 — Qualified → Proposal Sent: approval gate (not a hard block, but the
   // API short-circuits: it flips the deal into "pending approval" state and
   // does NOT change the stage until the admin approves.

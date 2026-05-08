@@ -761,7 +761,7 @@ textarea.fi{resize:vertical;min-height:68px}
           <span class="dup-badge" style="display:none">⚠️ Possible Duplicate</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-sm">Edit</button>
+          <!-- "Edit" button removed — use the Edit button on the Deal Information card instead (4.C) -->
           <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);border-color:var(--danger)" onclick="document.getElementById('lost-modal').style.display='flex'">Mark Lost</button>
           <button class="btn btn-p btn-sm" onclick="document.getElementById('advance-modal').style.display='flex'">Move Stage ▸</button>
         </div>
@@ -1679,7 +1679,8 @@ let leadSortCol = -1, leadSortAsc = true;
           const rows = document.querySelectorAll('#leads-tbody tr');
           let visible = 0;
           rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
+            // 3.E — search across visible cells PLUS hidden data-search (email, phone)
+            const text = (row.textContent + ' ' + (row.dataset.search || '')).toLowerCase();
             const rowStage = row.cells[5]?.textContent.trim().toLowerCase() || '';
             const rowSource = row.cells[3]?.textContent.trim().toLowerCase() || '';
             const rowOwner = row.cells[6]?.textContent.trim().toLowerCase() || '';
