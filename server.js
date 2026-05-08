@@ -528,6 +528,13 @@ app.get('/public/partner-reps', async (req, res) => {
 });
 
 // ─── Settings ───────────────────────────────────────────────────────────────
+// Public read for reference_lists (the Manual Lead form needs sources/industries
+// before the user is even assigned a role)
+app.get('/public/reference-lists', async (req, res) => {
+  const snap = await db.collection('crm_config').doc('reference_lists').get();
+  res.json(snap.exists ? snap.data() : {});
+});
+
 app.get('/api/settings/:key', requireAuth, async (req, res) => {
   const snap = await db.collection('crm_config').doc(req.params.key).get();
   res.json(snap.exists ? snap.data() : {});

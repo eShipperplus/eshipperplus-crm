@@ -164,6 +164,8 @@ async function bootAppData() {
     wireDealEditButton();
     wirePhoneInputs();
     wirePartnerPortalScreen();
+    wireRefListAddButtons();
+    await loadReferenceLists();
     setupAutoRefresh();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
@@ -1219,39 +1221,178 @@ function wireDealDetailHandlers() {
 }
 
 // ─── Manual lead entry form ─────────────────────────────────────────────────
+// Default reference lists used until admin overrides come back from
+// /api/settings/reference_lists. These match the canonical Service Catalog.
+const DEFAULT_INDUSTRIES = ['Retail', 'Food & Beverage', 'E-Commerce', 'Auto Parts', 'Distribution', 'Apparel', 'Pharmaceutical', 'CPG', 'B2B', 'Manufacturing', 'Other'];
+const DEFAULT_SOURCES = ['Website', 'Partner Portal', 'Manual Entry', 'Referral', 'Trade Show', 'Cold Outreach', 'LinkedIn', 'Other'];
+
 function wireManualLeadForm() {
   const screen = document.getElementById('s-manual-lead');
   if (!screen) return;
-  let submitBtn = screen.querySelector('.btn-p');
-  if (!submitBtn || submitBtn.dataset.wired) return;
-  submitBtn.dataset.wired = '1';
-  submitBtn.onclick = async (e) => {
-    e.preventDefault();
-    const inputs = screen.querySelectorAll('input, select, textarea');
-    const data = {};
-    let companyField, contactName, contactEmail, contactPhone, industry, sourceField, ownerField, notes;
-    inputs.forEach(inp => {
-      const label = (inp.previousElementSibling?.textContent || inp.placeholder || '').toLowerCase();
-      if (label.includes('company')) data.companyName = inp.value;
-      else if (label.includes('contact name')) data.contactName = inp.value;
-      else if (label.includes('email')) data.contactEmail = inp.value;
-      else if (label.includes('phone')) data.contactPhone = inp.value;
-      else if (label.includes('industry')) data.industry = inp.value;
-      else if (label.includes('source')) data.source = inp.value;
-      else if (label.includes('owner') || label.includes('assign')) {
-        const u = (window.__crmState.users || []).find(x => x.displayName === inp.value);
-        if (u) data.ownerUid = u.uid;
-      } else if (label.includes('note')) data.notes = inp.value;
+
+  // Populate Industry, Source, and Assigned Rep from real data
+  const industries = window.__crmState.referenceLists?.industries || DEFAULT_INDUSTRIES;
+  const sources = window.__crmState.referenceLists?.sources || DEFAULT_SOURCES;
+
+  const indSel = document.getElementById('ml-industry');
+  if (indSel && !indSel.dataset.wired) {
+    indSel.dataset.wired = '1';
+    indSel.innerHTML = '<option value="">— Select —</option>' +
+      industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+  }
+
+  const sourceSel = document.getElementById('ml-source');
+  if (sourceSel) {
+    const cur = sourceSel.value;
+    sourceSel.innerHTML = sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    sourceSel.value = cur || 'Manual Entry';
+  }
+
+  const ownerSel = document.getElementById('ml-owner');
+  if (ownerSel) {
+    const repsAndAdmins = (window.__crmState.users || []).filter(u => u.role === 'rep' || u.role === 'admin');
+    const cur = ownerSel.value;
+    ownerSel.innerHTML = '<option value="">— Select rep —</option>' +
+      repsAndAdmins.map(u => `<option value="${esc(u.uid)}">${esc(u.displayName)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`).join('');
+    if (cur) ownerSel.value = cur;
+    else if (currentUser?.role === 'rep') ownerSel.value = currentUser.uid; // default to self if rep
+  }
+
+  // Render service rows from canonical catalog (4.J revenue model + active checkbox + $ format)
+  const tbody = document.getElementById('ml-services-tbody');
+  if (tbody && !tbody.dataset.wired) {
+    tbody.dataset.wired = '1';
+    tbody.innerHTML = SERVICE_CATALOG.map(name => `
+      <tr data-svc="${esc(name)}">
+        <td>${esc(name)}</td>
+        <td><input type="checkbox" class="ml-svc-cb"></td>
+        <td>
+          <input class="fi ml-svc-rev money-input" type="text" placeholder="$0" disabled
+                 style="width:120px;padding:4px 8px;font-size:11.5px;background:var(--surface);color:var(--text3)">
+        </td>
+      </tr>`).join('');
+
+    const recalc = () => {
+      let total = 0;
+      tbody.querySelectorAll('tr').forEach(row => {
+        const cb = row.querySelector('.ml-svc-cb');
+        const rev = row.querySelector('.ml-svc-rev');
+        if (cb.checked) total += parseMoney(rev.value);
+      });
+      const totalEl = document.getElementById('ml-total-monthly');
+      const tierEl = document.getElementById('ml-total-tier');
+      if (totalEl) {
+        totalEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString();
+        totalEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
+      }
+      if (tierEl) {
+        const tier = total >= 25000 ? 4 : total >= 10000 ? 3 : total >= 5000 ? 2 : total > 0 ? 1 : 0;
+        tierEl.textContent = tier ? `→ Tier ${tier}` : '';
+      }
+    };
+
+    tbody.querySelectorAll('.ml-svc-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const row = cb.closest('tr');
+        const rev = row.querySelector('.ml-svc-rev');
+        if (cb.checked) {
+          rev.disabled = false;
+          rev.style.background = '';
+          rev.style.color = '';
+          rev.focus();
+        } else {
+          rev.disabled = true;
+          rev.value = ''; // uncheck → zero (per user request)
+          rev.style.background = 'var(--surface)';
+          rev.style.color = 'var(--text3)';
+        }
+        recalc();
+      });
     });
-    if (!data.companyName) return toast('Company name is required', 'warn');
-    data.source = data.source || 'Manual Entry';
-    try {
-      const result = await api('/api/deals', { method: 'POST', body: JSON.stringify(data) });
-      toast(`Lead created: Tier ${result.tier || '—'}`, 'ok');
-      inputs.forEach(i => { if (i.tagName !== 'SELECT') i.value = ''; });
-      await refreshPipeline();
-    } catch (err) { toast(err.message, 'error'); }
-  };
+    tbody.querySelectorAll('.ml-svc-rev').forEach(input => {
+      input.addEventListener('input', recalc);
+    });
+    wireMoneyInputs(tbody); // $-prefix auto-format
+  }
+
+  // Submit
+  const submitBtn = screen.querySelector('.btn-p');
+  if (submitBtn && !submitBtn.dataset.wired) {
+    submitBtn.dataset.wired = '1';
+    submitBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const data = {
+        companyName: document.getElementById('ml-company').value.trim(),
+        contactName: document.getElementById('ml-contact-name').value.trim(),
+        contactEmail: document.getElementById('ml-contact-email').value.trim(),
+        contactPhone: document.getElementById('ml-contact-phone').value.trim(),
+        industry: document.getElementById('ml-industry').value,
+        source: document.getElementById('ml-source').value || 'Manual Entry',
+        ownerUid: document.getElementById('ml-owner').value || null,
+        notes: document.getElementById('ml-notes').value.trim(),
+        services: [],
+      };
+      const tbodyEl = document.getElementById('ml-services-tbody');
+      tbodyEl?.querySelectorAll('tr').forEach(row => {
+        const cb = row.querySelector('.ml-svc-cb');
+        const rev = row.querySelector('.ml-svc-rev');
+        const v = parseMoney(rev?.value);
+        if (cb?.checked && v > 0) {
+          data.services.push({ name: row.dataset.svc, monthlyRevenue: v });
+        }
+      });
+      if (!data.companyName) return toast('Company name is required', 'warn');
+      if (!data.contactEmail) return toast('Email is required', 'warn');
+      try {
+        const result = await api('/api/deals', { method: 'POST', body: JSON.stringify(data) });
+        toast(`Lead created · Tier ${result.tier || '—'}`, 'ok');
+        // Clear form
+        ['ml-company', 'ml-contact-name', 'ml-contact-title', 'ml-contact-email', 'ml-contact-phone', 'ml-notes']
+          .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        document.getElementById('ml-industry').value = '';
+        tbodyEl?.querySelectorAll('.ml-svc-cb').forEach(cb => {
+          if (cb.checked) cb.click(); // toggle off (also disables + clears revenue)
+        });
+        await refreshAll();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
+
+  // Clear Form button
+  const clearBtn = Array.from(screen.querySelectorAll('button.btn-sm')).find(b => b.textContent.trim() === 'Clear Form');
+  if (clearBtn && !clearBtn.dataset.wired) {
+    clearBtn.dataset.wired = '1';
+    clearBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      ['ml-company', 'ml-contact-name', 'ml-contact-title', 'ml-contact-email', 'ml-contact-phone', 'ml-notes']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const ind = document.getElementById('ml-industry'); if (ind) ind.value = '';
+      const tbodyEl = document.getElementById('ml-services-tbody');
+      tbodyEl?.querySelectorAll('.ml-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+    });
+  }
+}
+
+// ─── Money input ($-prefix auto-format) ─────────────────────────────────────
+// Any input with class .money-input shows "$X,XXX" as the user types,
+// strips non-digits, and exposes the raw number via parseMoney().
+function parseMoney(s) {
+  if (!s) return 0;
+  return Number(String(s).replace(/[^\d.]/g, '')) || 0;
+}
+function wireMoneyInputs(scope = document) {
+  scope.querySelectorAll('.money-input').forEach(input => {
+    if (input.dataset.moneyWired) return;
+    input.dataset.moneyWired = '1';
+    input.addEventListener('input', () => {
+      const n = parseMoney(input.value);
+      input.value = n === 0 && input.value === '' ? '' : '$' + n.toLocaleString();
+    });
+    input.addEventListener('blur', () => {
+      const n = parseMoney(input.value);
+      input.value = n === 0 ? '' : '$' + n.toLocaleString();
+    });
+  });
 }
 
 // ─── Partner rep directory upload ───────────────────────────────────────────
@@ -1391,6 +1532,125 @@ function wireUserManagement() {
   }
 }
 
+// ─── Reference Lists (Industry / Lead Source) editor ────────────────────────
+// Loaded from /api/settings/reference_lists, persisted on every Add / Delete.
+// Drives the dropdowns on Manual Lead Entry, Pipeline filter, Leads filter.
+async function loadReferenceLists() {
+  try {
+    const cfg = await api('/api/settings/reference_lists');
+    window.__crmState.referenceLists = {
+      industries: Array.isArray(cfg.industries) && cfg.industries.length ? cfg.industries : DEFAULT_INDUSTRIES,
+      sources: Array.isArray(cfg.sources) && cfg.sources.length ? cfg.sources : DEFAULT_SOURCES,
+    };
+    renderRefListEditor();
+    populateAllSourceDropdowns();
+    populateAllIndustryDropdowns();
+  } catch (err) {
+    // Fall back to defaults
+    window.__crmState.referenceLists = { industries: DEFAULT_INDUSTRIES, sources: DEFAULT_SOURCES };
+    renderRefListEditor();
+    populateAllSourceDropdowns();
+    populateAllIndustryDropdowns();
+  }
+}
+
+function renderRefListEditor() {
+  const lists = window.__crmState.referenceLists || {};
+  document.querySelectorAll('[data-ref-list]').forEach(container => {
+    const key = container.dataset.refList; // 'industries' or 'sources'
+    const items = lists[key] || [];
+    container.innerHTML = items.map(item => `
+      <div class="ref-item" data-value="${esc(item)}" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">
+        ${esc(item)}
+        <button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="window.removeRefItem('${esc(key)}','${esc(item)}')">✕</button>
+      </div>`).join('') || '<div style="font-size:11px;color:var(--text3);padding:6px 8px">No entries — add some below</div>';
+  });
+}
+
+window.removeRefItem = async (key, value) => {
+  const lists = window.__crmState.referenceLists || {};
+  lists[key] = (lists[key] || []).filter(v => v !== value);
+  window.__crmState.referenceLists = lists;
+  renderRefListEditor();
+  populateAllSourceDropdowns();
+  populateAllIndustryDropdowns();
+  try {
+    await api('/api/settings/reference_lists', { method: 'PUT', body: JSON.stringify(lists) });
+    toast(`Removed "${value}"`, 'ok');
+  } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+};
+
+function wireRefListAddButtons() {
+  const wires = [
+    { btn: 'add-industry-btn', input: 'add-industry', key: 'industries' },
+    { btn: 'add-source-btn', input: 'add-source', key: 'sources' },
+  ];
+  wires.forEach(({ btn, input, key }) => {
+    const b = document.getElementById(btn);
+    if (!b || b.dataset.wired) return;
+    b.dataset.wired = '1';
+    b.addEventListener('click', async () => {
+      const inp = document.getElementById(input);
+      const v = (inp?.value || '').trim();
+      if (!v) return;
+      const lists = window.__crmState.referenceLists || {};
+      lists[key] = lists[key] || [];
+      if (lists[key].some(x => x.toLowerCase() === v.toLowerCase())) {
+        return toast('Already in the list', 'warn');
+      }
+      lists[key].push(v);
+      window.__crmState.referenceLists = lists;
+      inp.value = '';
+      renderRefListEditor();
+      populateAllSourceDropdowns();
+      populateAllIndustryDropdowns();
+      try {
+        await api('/api/settings/reference_lists', { method: 'PUT', body: JSON.stringify(lists) });
+        toast(`Added "${v}"`, 'ok');
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+    });
+  });
+}
+
+// Sources dropdown consistency — feed Pipeline filter, Leads filter from saved list
+function populateAllSourceDropdowns() {
+  const sources = window.__crmState.referenceLists?.sources || DEFAULT_SOURCES;
+  const targets = [
+    document.getElementById('pipeline-filter-source'),
+    document.getElementById('lead-filter-source'),
+    document.getElementById('ml-source'),
+  ];
+  targets.forEach(sel => {
+    if (!sel) return;
+    const cur = sel.value;
+    const placeholder = sel.id.includes('filter') ? '<option value="">All Sources</option>' : '';
+    sel.innerHTML = placeholder + sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    if (cur && (placeholder || sources.includes(cur))) sel.value = cur;
+  });
+}
+
+function populateAllIndustryDropdowns() {
+  const industries = window.__crmState.referenceLists?.industries || DEFAULT_INDUSTRIES;
+  const targets = [document.getElementById('ml-industry')];
+  targets.forEach(sel => {
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+    if (cur) sel.value = cur;
+  });
+  // Also refresh the Industry select inside the Deal Information card
+  document.querySelectorAll('#s-deal .drow .dv select').forEach(sel => {
+    const label = sel.closest('.drow')?.querySelector('.dk')?.textContent.trim().toLowerCase();
+    if (label === 'industry') {
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">—</option>' +
+        industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+      if (cur) sel.value = cur;
+    }
+  });
+}
+
 function wireNotificationRulesForm() {
   if (currentUser?.role !== 'admin') return;
 
@@ -1418,6 +1678,12 @@ function wireNotificationRulesForm() {
       if (t2 && cfg.tierThresholds?.tier2) t2.value = cfg.tierThresholds.tier2;
       if (t3 && cfg.tierThresholds?.tier3) t3.value = cfg.tierThresholds.tier3;
       if (t4 && cfg.tierThresholds?.tier4) t4.value = cfg.tierThresholds.tier4;
+
+      // Recipient overrides
+      const adminRcpt = document.getElementById('cfg-admin-recipients');
+      const obRcpt = document.getElementById('cfg-onboarding-recipient');
+      if (adminRcpt) adminRcpt.value = (cfg.adminRecipientsOverride || []).join(', ');
+      if (obRcpt) obRcpt.value = cfg.onboardingRecipientOverride || '';
 
       // Toggle each rule checkbox from saved enabledRules map
       const enabledRules = cfg.enabledRules || {};
@@ -1448,15 +1714,20 @@ function wireNotificationRulesForm() {
       const t2 = Number(document.getElementById('cfg-tier2')?.value) || 5000;
       const t3 = Number(document.getElementById('cfg-tier3')?.value) || 10000;
       const t4 = Number(document.getElementById('cfg-tier4')?.value) || 25000;
-      // Validate ascending order — Tier 2 < Tier 3 < Tier 4
       if (!(t2 < t3 && t3 < t4)) {
         return toast('Tier thresholds must be ascending (Tier 2 < Tier 3 < Tier 4)', 'warn');
       }
+      // Notification recipient overrides
+      const adminRcpt = (document.getElementById('cfg-admin-recipients')?.value || '')
+        .split(',').map(s => s.trim()).filter(Boolean);
+      const obRcpt = (document.getElementById('cfg-onboarding-recipient')?.value || '').trim();
       const payload = {
         inactivityRepDays: Number(repField?.value) || 3,
         inactivityAdminDays: Number(adminField?.value) || 7,
         tierThresholds: { tier2: t2, tier3: t3, tier4: t4 },
         enabledRules,
+        adminRecipientsOverride: adminRcpt,
+        onboardingRecipientOverride: obRcpt,
       };
       try {
         await api('/api/settings/notification_rules', {

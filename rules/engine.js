@@ -83,12 +83,23 @@ function tierFromMonthly(monthly, thresholds = DEFAULT_TIER_THRESHOLDS) {
   return 1;
 }
 
+// Pull admin recipients. If `adminRecipientsOverride` is set in settings,
+// that wins (admin can route emails to specific addresses, not all admins).
 async function adminRecipients(db) {
+  const settings = await getSettings(db);
+  const override = Array.isArray(settings.adminRecipientsOverride) ? settings.adminRecipientsOverride : [];
+  if (override.length) {
+    return override.map(email => ({ email, displayName: email, uid: null }));
+  }
   const snap = await db.collection('crm_users').where('role', '==', 'admin').get();
   return snap.docs.map(d => d.data());
 }
 
 async function onboardingRecipients(db) {
+  const settings = await getSettings(db);
+  if (settings.onboardingRecipientOverride) {
+    return [{ email: settings.onboardingRecipientOverride, displayName: settings.onboardingRecipientOverride, uid: null }];
+  }
   const snap = await db.collection('crm_users').where('role', '==', 'onboarding').get();
   return snap.docs.map(d => d.data());
 }

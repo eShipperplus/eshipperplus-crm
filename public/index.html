@@ -1020,84 +1020,47 @@ textarea.fi{resize:vertical;min-height:68px}
             </div>
 
             <div class="fg2" style="margin-bottom:12px">
-              <div class="fg"><label class="fl2">Company Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="e.g. Northern Goods Ltd"></div>
+              <div class="fg"><label class="fl2">Company Name <span style="color:var(--danger)">*</span></label><input class="fi" id="ml-company" placeholder="e.g. Northern Goods Ltd"></div>
               <div class="fg"><label class="fl2">Industry</label>
-                <select class="fsel"><option>— Select —</option><option>Retail</option><option>Food & Beverage</option><option>E-Commerce</option><option>Auto Parts</option><option>Distribution</option><option>Apparel</option><option>Other</option></select>
+                <select class="fsel" id="ml-industry"><option value="">— Select —</option></select>
               </div>
             </div>
 
             <div class="fg2" style="margin-bottom:12px">
-              <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Full name"></div>
-              <div class="fg"><label class="fl2">Contact Title</label><input class="fi" placeholder="e.g. VP Operations"></div>
+              <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" id="ml-contact-name" placeholder="Full name"></div>
+              <div class="fg"><label class="fl2">Contact Title</label><input class="fi" id="ml-contact-title" placeholder="e.g. VP Operations"></div>
             </div>
 
             <div class="fg2" style="margin-bottom:12px">
-              <div class="fg"><label class="fl2">Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@company.com"></div>
-              <div class="fg"><label class="fl2">Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
+              <div class="fg"><label class="fl2">Email <span style="color:var(--danger)">*</span></label><input class="fi" id="ml-contact-email" type="email" placeholder="contact@company.com"></div>
+              <div class="fg"><label class="fl2">Phone</label><input class="fi phone-input" id="ml-contact-phone" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
             </div>
 
             <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;margin-bottom:14px">
               <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Service Interests & Revenue</div>
-              <table class="dt" style="width:100%;margin-bottom:10px">
-                <tr><th>Service</th><th>Interested?</th><th>Est. Monthly Revenue</th></tr>
-                <tr>
-                  <td>Small Parcel Shipping</td>
-                  <td><input type="checkbox"></td>
-                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
-                </tr>
-                <tr>
-                  <td>LTL Freight</td>
-                  <td><input type="checkbox"></td>
-                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
-                </tr>
-                <tr>
-                  <td>FTL Freight</td>
-                  <td><input type="checkbox"></td>
-                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
-                </tr>
-                <tr>
-                  <td>Warehousing &amp; Fulfillment</td>
-                  <td><input type="checkbox" data-rule-toggle checked></td>
-                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$12,000"></td>
-                </tr>
-                <tr>
-                  <td>Fulfillment / Pick & Pack</td>
-                  <td><input type="checkbox"></td>
-                  <td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td>
-                </tr>
+              <table class="dt" style="width:100%;margin-bottom:10px" id="ml-services-table">
+                <thead><tr><th>Service</th><th style="width:90px">Interested?</th><th>Est. Monthly Revenue</th></tr></thead>
+                <tbody id="ml-services-tbody"></tbody>
               </table>
               <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px">
                 <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
-                <span style="font-size:16px;font-weight:700;color:var(--success)">$12,000</span>
-                <span style="font-size:11px;color:var(--text3)">→ Tier 3</span>
+                <span id="ml-total-monthly" style="font-size:16px;font-weight:700;color:var(--text3)">—</span>
+                <span id="ml-total-tier" style="font-size:11px;color:var(--text3)"></span>
               </div>
             </div>
 
             <div class="fg2" style="margin-bottom:12px">
               <div class="fg"><label class="fl2">Lead Source <span style="color:var(--danger)">*</span></label>
-                <select class="fsel">
-                  <option>Trade Show / Event</option>
-                  <option>Cold Outreach — Email</option>
-                  <option>Cold Outreach — Phone</option>
-                  <option>Personal Referral</option>
-                  <option>LinkedIn</option>
-                  <option>Existing Client Referral</option>
-                  <option>Other — specify in notes</option>
-                </select>
+                <select class="fsel" id="ml-source"></select>
               </div>
               <div class="fg"><label class="fl2">Assigned Rep <span style="color:var(--danger)">*</span></label>
-                <select class="fsel">
-                  <option>Ahmed D.</option>
-                  <option>Sara K.</option>
-                  <option>James T.</option>
-                  <option>Priya L.</option>
-                </select>
+                <select class="fsel" id="ml-owner"></select>
               </div>
             </div>
 
             <div class="fg" style="margin-bottom:16px">
               <label class="fl2">Notes / Context</label>
-              <textarea class="fi" rows="3" placeholder="How was this lead sourced? Any context from initial conversation, pain points mentioned, timeline, etc."></textarea>
+              <textarea class="fi" id="ml-notes" rows="3" placeholder="How was this lead sourced? Any context from initial conversation, pain points mentioned, timeline, etc."></textarea>
             </div>
 
             <div style="background:var(--surface);border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2)">
@@ -1493,13 +1456,14 @@ textarea.fi{resize:vertical;min-height:68px}
       <div style="margin-top:14px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px">
         <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Notification Recipients — Configurable</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="fg"><label class="fl2">Management alert recipients (R-03, R-08, R-09, R-10, R-12, R-18, R-22, R-26, R-31)</label>
-            <input class="fi" value="aamer@eshipperplus.com, ahmed@eshipperplus.com">
+          <div class="fg"><label class="fl2">Management alert recipients (comma-separated)</label>
+            <input class="fi" id="cfg-admin-recipients" placeholder="aamer@eshipperplus.com, ahmed@eshipperplus.com">
           </div>
-          <div class="fg"><label class="fl2">Onboarding handoff recipient (R-24)</label>
-            <input class="fi" value="kim.w@eshipperplus.com">
+          <div class="fg"><label class="fl2">Onboarding handoff recipient (R-21 / R-24)</label>
+            <input class="fi" id="cfg-onboarding-recipient" placeholder="kim@eshipperplus.com">
           </div>
         </div>
+        <div style="margin-top:8px;font-size:10.5px;color:var(--text3)">Defaults: management = all admin users, onboarding = first user with onboarding role. Override above to send to different addresses (saved with the rest of Notification Rules).</div>
       </div>
     </div>
 
@@ -1522,53 +1486,25 @@ textarea.fi{resize:vertical;min-height:68px}
         </div>
       </div>
       
-      <!-- REFERENCE LISTS -->
+      <!-- REFERENCE LISTS — wired to /api/settings/reference_lists -->
       <div class="card" style="max-width:720px;margin-bottom:14px">
-        <div class="ch"><span class="ct">Reference Lists</span><span class="cs">Used in deal forms — Industry, Lead Source, Owner</span></div>
+        <div class="ch"><span class="ct">Reference Lists</span><span class="cs">Drives the dropdowns on intake forms</span></div>
         <div class="cb">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
             <div>
               <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Industry</div>
-              <div id="industry-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Food & Beverage<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Retail<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">E-Commerce<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Auto Parts<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Distribution<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Apparel<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Pharmaceutical<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-              </div>
-              <div style="display:flex;gap:5px"><input class="fi" id="add-industry" placeholder="Add industry..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('industry-list','add-industry')">+ Add</button></div>
+              <div id="industry-list" data-ref-list="industries" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-industry" placeholder="Add industry..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" id="add-industry-btn">+ Add</button></div>
             </div>
-
             <div>
               <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Lead Source</div>
-              <div id="source-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">WordPress<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Partner Portal<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Manual Entry<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Trade Show<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Cold Outreach<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Referral<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">LinkedIn<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-              </div>
-              <div style="display:flex;gap:5px"><input class="fi" id="add-source" placeholder="Add source..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('source-list','add-source')">+ Add</button></div>
-            </div>
-
-            <div>
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Deal Owners / Reps</div>
-              <div id="owner-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Ahmed D.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--text3);cursor:not-allowed" title="Cannot remove Admin">🔒</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Aamer A.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--text3);cursor:not-allowed" title="Cannot remove Admin">🔒</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Sara K.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">James T.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-                <div class="ref-item" style="display:flex;align-items:center;justify-content:space-between;font-size:11.5px;background:var(--surface);padding:4px 8px;border-radius:5px">Priya L.<button class="btn btn-sm" style="padding:1px 6px;font-size:9.5px;color:var(--danger)" onclick="this.parentElement.remove()">✕</button></div>
-              </div>
-              <div style="display:flex;gap:5px"><input class="fi" id="add-owner" placeholder="Add rep name..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" onclick="addRefItem('owner-list','add-owner')">+ Add</button></div>
+              <div id="source-list" data-ref-list="sources" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-source" placeholder="Add source..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" id="add-source-btn">+ Add</button></div>
             </div>
           </div>
-          
+          <div style="margin-top:14px;padding:10px 12px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--text2)">
+            <strong>Note:</strong> Deal Owners / Reps are managed in <a href="#" onclick="show('users',document.querySelector('.ni[onclick*=users]'));return false;" style="color:var(--purple)">User Management</a>, not here.
+          </div>
         </div>
       </div>
 
