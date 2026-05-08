@@ -379,14 +379,17 @@ function populateOwnerDropdowns() {
     pipelineFilter.value = current;
   }
 
-  // Rep reassignment modal in Deal Detail — uses uid
+  // Rep reassignment modal in Deal Detail — uses uid. Mark current owner
+  // visually + leave the dropdown unselected to force an explicit pick (so
+  // we never accidentally reassign Ali → Ali).
   const repModal = document.querySelector('#rep-modal select.fsel');
   if (repModal) {
-    const current = repModal.value;
-    repModal.innerHTML = repsAndAdmins.map(u =>
-      `<option value="${esc(u.uid)}">${esc(u.displayName)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`
-    ).join('');
-    if (current) repModal.value = current;
+    const currentOwnerUid = window.__crmState.currentDeal?.ownerUid;
+    repModal.innerHTML = `<option value="">— Select a different rep —</option>` +
+      repsAndAdmins.map(u => {
+        const isCurrent = u.uid === currentOwnerUid;
+        return `<option value="${esc(u.uid)}" ${isCurrent ? 'disabled' : ''}>${esc(u.displayName)}${u.role === 'admin' ? ' (Admin)' : ''}${isCurrent ? ' — current owner' : ''}</option>`;
+      }).join('');
   }
 
   // Deal Detail "Owner" inline select
@@ -541,6 +544,17 @@ function relativeTime(ts) {
   return new Date(s * 1000).toLocaleDateString();
 }
 
+function formatDate(ts) {
+  if (!ts) return '—';
+  const s = ts._seconds || ts.seconds || (ts.toDate ? ts.toDate().getTime() / 1000 : 0);
+  if (!s) return '—';
+  return new Date(s * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function tierLabel(tier) {
+  return { 1: ' — < $5K/mo', 2: ' — $5K–10K/mo', 3: ' — $10K–25K/mo', 4: ' — $25K+/mo' }[tier] || '';
+}
+
 // ─── Notifications render ────────────────────────────────────────────────────
 function renderNotifications(notifs) {
   const list = document.getElementById('notif-list');
@@ -639,13 +653,44 @@ function renderDealDetail(d, activity) {
   const dupBadge = titleSpan?.parentElement?.querySelector('.dup-badge');
   if (dupBadge) dupBadge.style.display = d.duplicateFlag ? '' : 'none';
 
-  // Info rows — formatted phone, dash for empty
-  const info = screen.querySelectorAll('.drow .dv');
-  if (info[0]) info[0].textContent = d.companyName || '—';
-  if (info[1]) info[1].textContent = d.contactName || '—';
-  if (info[2]) info[2].textContent = d.contactEmail || '—';
-  if (info[3]) info[3].textContent = fmtPhone(d.contactPhone);
-  // Top breadcrumb / title bar should reflect this deal (4.1)
+  // Info rows — every .drow's .dv must reflect live data
+  const rows = screen.querySelectorAll('.drow');
+  // Map by label text (.dk) so reordering the HTML doesn't break this
+  rows.forEach(row => {
+    const key = row.querySelector('.dk')?.textContent.trim().toLowerCase();
+    const dv = row.querySelector('.dv');
+    if (!dv) return;
+    switch (key) {
+      case 'company':       dv.textContent = d.companyName || '—'; break;
+      case 'contact':       dv.textContent = d.contactName || '—'; break;
+      case 'email':         dv.textContent = d.contactEmail || '—'; break;
+      case 'phone':         dv.textContent = fmtPhone(d.contactPhone); break;
+      case 'industry': {
+        const sel = dv.querySelector('select');
+        if (sel) sel.value = d.industry || '';
+        break;
+      }
+      case 'lead source': {
+        const sel = dv.querySelector('select');
+        if (sel) sel.value = d.source || '';
+        break;
+      }
+      case 'owner': {
+        const sel = dv.querySelector('select');
+        if (sel) sel.value = d.ownerUid || '';
+        break;
+      }
+      case 'deal tier': {
+        const pill = dv.querySelector('.pill');
+        if (pill) pill.textContent = d.tier ? `Tier ${d.tier}${tierLabel(d.tier)}` : '—';
+        break;
+      }
+      case 'created':       dv.textContent = formatDate(d.createdAt); break;
+      case 'last activity': dv.textContent = relativeTime(d.lastActivityAt); break;
+    }
+  });
+
+  // Top breadcrumb / title bar reflects this deal (4.1)
   const tbTitle = document.getElementById('tb-title');
   if (tbTitle && screen.classList.contains('on')) {
     tbTitle.textContent = `Deal Detail — ${d.companyName}`;
@@ -875,92 +920,94 @@ window.decideDuplicate = async (action) => {
 };
 
 function wireDealDetailHandlers() {
-  // Override the modal confirm buttons so they call the API
-  const advanceBtn = document.querySelector('#advance-modal .btn-p');
-  if (advanceBtn && !advanceBtn.dataset.wired) {
-    advanceBtn.dataset.wired = '1';
-    advanceBtn.onclick = async () => {
-      const id = document.getElementById('deal-detail-id')?.value;
-      const select = document.querySelector('#advance-modal select');
-      const reason = document.querySelector('#advance-modal textarea')?.value;
-      if (!id || !select) return;
-      try {
-        const r = await api(`/api/deals/${id}/stage`, {
-          method: 'POST', body: JSON.stringify({ toStage: select.value, reason }),
-        });
-        document.getElementById('advance-modal').style.display = 'none';
-        if (r?.status === 'pending_approval') {
-          toast('Approval requested — deal will move once admin approves.', 'info');
-        } else {
-          toast(`Moved to ${select.value}`, 'ok');
-        }
-        await refreshPipeline();
-        openDeal(id);
-      } catch (err) { toast(err.message, 'error'); }
-    };
+  // Helper: bind a click handler ONCE (idempotent across refreshAll calls).
+  function bindOnce(id, handler) {
+    const el = document.getElementById(id);
+    if (!el) { console.warn(`[wire] missing element #${id}`); return; }
+    if (el.dataset.wired === '1') return;
+    el.dataset.wired = '1';
+    el.addEventListener('click', handler);
   }
 
-  // Lost modal — wire reason → auto-fill re-engagement date (4.7a, 4.7b)
+  // ── Move Stage modal ─────────────────────────────────────────────────────
+  bindOnce('advance-confirm-btn', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    const select = document.querySelector('#advance-modal select');
+    const reason = document.querySelector('#advance-modal textarea')?.value;
+    if (!id || !select) return toast('No deal selected', 'warn');
+    try {
+      const r = await api(`/api/deals/${id}/stage`, {
+        method: 'POST', body: JSON.stringify({ toStage: select.value, reason }),
+      });
+      document.getElementById('advance-modal').style.display = 'none';
+      if (r?.status === 'pending_approval') {
+        toast('Approval requested — deal will move once admin approves.', 'info');
+      } else {
+        toast(`Moved to ${select.value}`, 'ok');
+      }
+      await refreshAll();
+      openDeal(id);
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  // ── Mark Lost — auto-fill re-engagement date on reason change ────────────
   const lostReason = document.getElementById('lost-reason');
   const lostDateInput = document.getElementById('lost-reengagement-date');
-  if (lostReason && lostDateInput && !lostReason.dataset.wired) {
+  if (lostReason && lostDateInput && lostReason.dataset.wired !== '1') {
     lostReason.dataset.wired = '1';
     lostReason.addEventListener('change', () => {
-      const months = Number(lostReason.options[lostReason.selectedIndex]?.dataset.months) || 6;
+      const opt = lostReason.options[lostReason.selectedIndex];
+      const months = Number(opt?.dataset.months) || 6;
       const d = new Date();
       d.setMonth(d.getMonth() + months);
       lostDateInput.value = d.toISOString().slice(0, 10);
     });
   }
 
-  const lostBtn = document.querySelector('#lost-modal [style*="danger"]');
-  if (lostBtn && !lostBtn.dataset.wired) {
-    lostBtn.dataset.wired = '1';
-    lostBtn.onclick = async () => {
-      const id = document.getElementById('deal-detail-id')?.value;
-      const reasonSel = document.getElementById('lost-reason');
-      const dateInput = document.getElementById('lost-reengagement-date');
-      if (!id || !reasonSel?.value) return toast('Pick a loss reason', 'warn');
-      if (!dateInput?.value) return toast('Set a re-engagement date', 'warn');
-      try {
-        await api(`/api/deals/${id}/stage`, {
-          method: 'POST',
-          body: JSON.stringify({
-            toStage: 'Closed Lost',
-            lossReason: reasonSel.value,
-            reengagementDate: dateInput.value,
-          }),
-        });
-        document.getElementById('lost-modal').style.display = 'none';
-        toast('Marked as Closed Lost', 'ok');
-        await refreshAll();
-        openDeal(id);
-      } catch (err) { toast(err.message, 'error'); }
-    };
-  }
+  // ── Mark Lost — Confirm button ───────────────────────────────────────────
+  bindOnce('lost-confirm-btn', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    const reasonSel = document.getElementById('lost-reason');
+    const dateInput = document.getElementById('lost-reengagement-date');
+    if (!id) return toast('No deal selected', 'warn');
+    if (!reasonSel?.value) return toast('Pick a loss reason', 'warn');
+    if (!dateInput?.value) return toast('Set a re-engagement date', 'warn');
+    try {
+      await api(`/api/deals/${id}/stage`, {
+        method: 'POST',
+        body: JSON.stringify({
+          toStage: 'Closed Lost',
+          lossReason: reasonSel.value,
+          reengagementDate: dateInput.value,
+        }),
+      });
+      document.getElementById('lost-modal').style.display = 'none';
+      reasonSel.value = ''; dateInput.value = ''; // reset so next lost is clean
+      toast('Marked as Closed Lost', 'ok');
+      await refreshAll();
+      openDeal(id);
+    } catch (err) { toast('Mark Lost failed: ' + err.message, 'error'); }
+  });
 
-  // Rep reassignment modal
-  const repBtn = document.querySelector('#rep-modal .btn-p');
-  if (repBtn && !repBtn.dataset.wired) {
-    repBtn.dataset.wired = '1';
-    repBtn.onclick = async () => {
-      const id = document.getElementById('deal-detail-id')?.value;
-      const sel = document.querySelector('#rep-modal select');
-      const reason = document.querySelector('#rep-modal input')?.value;
-      if (!id || !sel || !sel.value) return toast('Pick a rep first', 'warn');
-      const newOwnerUid = sel.value;
-      try {
-        await api(`/api/deals/${id}/reassign`, {
-          method: 'POST', body: JSON.stringify({ newOwnerUid, reason }),
-        });
-        document.getElementById('rep-modal').style.display = 'none';
-        toast('Rep reassigned', 'ok');
-        await refreshAll();
-        openDeal(id);
-      } catch (err) { toast(err.message, 'error'); }
-    };
-  }
-  // Always re-populate dropdown from current users list (called by populateOwnerDropdowns)
+  // ── Rep reassignment modal ───────────────────────────────────────────────
+  bindOnce('rep-confirm-btn', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    const sel = document.querySelector('#rep-modal select');
+    const reason = document.querySelector('#rep-modal input')?.value;
+    if (!id) return toast('No deal selected', 'warn');
+    if (!sel?.value) return toast('Pick a different rep', 'warn');
+    try {
+      await api(`/api/deals/${id}/reassign`, {
+        method: 'POST', body: JSON.stringify({ newOwnerUid: sel.value, reason }),
+      });
+      document.getElementById('rep-modal').style.display = 'none';
+      toast('Rep reassigned', 'ok');
+      await refreshAll();
+      openDeal(id);
+    } catch (err) { toast(err.message, 'error'); }
+  });
+
+  // Always re-populate owner dropdowns from current users list
   populateOwnerDropdowns();
 
   // Log note
@@ -1334,13 +1381,18 @@ function setupAutoRefresh() {
   document.querySelectorAll('#sb .ni').forEach(ni => {
     ni.addEventListener('click', () => {
       refreshAll({ silent: true });
-      // If user navigates to Deal Detail without first selecting a deal,
-      // show the empty state instead of stale content.
-      if (ni.getAttribute('onclick')?.includes("'deal'") && !window.__crmState.currentDeal) {
+      // Clicking "Deal Detail" in the sidebar = "I want to see the empty
+      // state, not the deal I had open before". Clear and show empty.
+      // (To go back to a specific deal, click it from Pipeline / Leads.)
+      if (ni.getAttribute('onclick')?.includes("'deal'")) {
+        window.__crmState.currentDeal = null;
         const emptyState = document.getElementById('deal-empty-state');
         const dealContent = document.getElementById('deal-content');
         if (emptyState) emptyState.style.display = 'flex';
         if (dealContent) dealContent.style.display = 'none';
+        // Also reset the top-bar title
+        const tbTitle = document.getElementById('tb-title');
+        if (tbTitle) tbTitle.textContent = 'Deal Detail';
       }
     });
   });

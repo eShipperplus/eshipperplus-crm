@@ -472,6 +472,17 @@ describe('Rep reassignment', () => {
     const res = await request(app).post('/api/deals/d1/reassign').set(headers).send({});
     expect(res.status).toBe(400);
   });
+
+  test('reassign to the SAME rep is rejected (no-op guard)', async () => {
+    const headers = asUser('admin1', 'admin');
+    seedDeals([{ id: 'd1', ownerUid: 'u1', stage: 'New', companyName: 'X' }]);
+    mockStore.collections.crm_users.u1 = { uid: 'u1', role: 'rep', email: 'u1@x.com', displayName: 'U1' };
+    const res = await request(app).post('/api/deals/d1/reassign').set(headers).send({
+      newOwnerUid: 'u1', reason: 'oops',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already assigned/i);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

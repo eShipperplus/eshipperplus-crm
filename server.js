@@ -377,6 +377,10 @@ app.post('/api/deals/:id/reassign', requireAuth, requireRole('admin'), async (re
   if (!snap.exists) return res.status(404).json({ error: 'Not found' });
   const deal = snap.data();
   const oldOwnerUid = deal.ownerUid;
+  // Don't log a no-op "Ali → Ali" reassignment
+  if (newOwnerUid === oldOwnerUid) {
+    return res.status(400).json({ error: 'Deal is already assigned to that rep' });
+  }
 
   const newOwnerName = await userName(newOwnerUid);
   await ref.update({
