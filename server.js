@@ -447,6 +447,14 @@ app.get('/api/deals/:id/activity', requireAuth, async (req, res) => {
   res.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 });
 
+// Global recent activity (Dashboard "Recent Activity" panel — bug 1.7)
+app.get('/api/activity/recent', requireAuth, async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 25, 100);
+  const snap = await db.collection('crm_activity')
+    .orderBy('timestamp', 'desc').limit(limit).get();
+  res.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+});
+
 // Onboarding checklist — admin + onboarding role only (R-23: rep read-only)
 app.patch('/api/deals/:id/onboarding', requireAuth, requireRole('admin', 'onboarding'), async (req, res) => {
   const { checklistState } = req.body || {};

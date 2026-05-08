@@ -322,7 +322,8 @@ textarea.fi{resize:vertical;min-height:68px}
 
     <!-- ═══ DASHBOARD ═══ -->
     <div class="screen on" id="s-dashboard">
-      <div style="background:var(--purple);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <!-- Internal dev banner — admin only (per bug 1.A/1.B) -->
+      <div id="dev-scope-banner" style="display:none;background:var(--purple);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:12px;font-weight:600;color:#fff">MVP Scope — Phase 1</span>
           <span style="font-size:11px;color:rgba(255,255,255,.6)">Meeting flow · AI scoring · Profitability panel → v2</span>
@@ -412,10 +413,12 @@ textarea.fi{resize:vertical;min-height:68px}
 
     <!-- ═══ PIPELINE ═══ -->
     <div class="screen" id="s-pipeline">
-      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:12px;color:var(--text2)">24 active deals · $1.84M pipeline</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-sm">Filter</button>
+      <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div id="pipeline-header-stats" style="font-size:12px;color:var(--text2)">— active deals · — pipeline</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="fsel" id="pipeline-filter-owner" style="font-size:11.5px;padding:4px 10px;width:160px"><option value="">All Owners</option></select>
+          <select class="fsel" id="pipeline-filter-source" style="font-size:11.5px;padding:4px 10px;width:160px"><option value="">All Sources</option><option>Website</option><option>Partner Portal</option><option>Manual Entry</option><option>Referral</option></select>
+          <button class="btn btn-sm" onclick="document.getElementById('pipeline-filter-owner').value='';document.getElementById('pipeline-filter-source').value='';window.applyPipelineFilters&&window.applyPipelineFilters()" style="font-size:10.5px">✕ Clear</button>
           <button class="btn btn-p btn-sm" id="pipeline-new-deal-btn" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ New Deal</button>
         </div>
       </div>
@@ -525,9 +528,8 @@ textarea.fi{resize:vertical;min-height:68px}
             <option value="">All Sources</option>
             <option>WordPress</option><option>Partner Portal</option><option>Manual Entry</option><option>Referral</option><option>Direct</option>
           </select>
-          <select class="fsel" id="lead-filter-owner" style="font-size:11.5px;padding:4px 8px;width:120px" onchange="filterLeads()">
+          <select class="fsel" id="lead-filter-owner" style="font-size:11.5px;padding:4px 8px;width:130px" onchange="filterLeads()">
             <option value="">All Owners</option>
-            <option>Ahmed D.</option><option>Aamer A.</option><option>Sara K.</option><option>James T.</option><option>Priya L.</option>
           </select>
           <button class="btn btn-sm" onclick="clearLeadFilters()" style="font-size:10.5px">✕ Clear</button>
         </div>
@@ -810,10 +812,7 @@ textarea.fi{resize:vertical;min-height:68px}
               <div class="drow">
                 <span class="dk">Owner</span>
                 <span class="dv">
-                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto" id="deal-owner-select">
-                    <option>Sara K.</option><option>Ahmed D.</option><option>Aamer A.</option>
-                    <option>James T.</option><option>Priya L.</option>
-                  </select>
+                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto" id="deal-owner-select"></select>
                 </span>
               </div>
               <div class="drow"><span class="dk">Deal Tier</span><span class="dv"><span class="pill p-ob">Tier 4 — $25K+/mo</span></span></div>
@@ -850,23 +849,23 @@ textarea.fi{resize:vertical;min-height:68px}
 
         <!-- RIGHT COLUMN -->
         <div>
-          <!-- Service Breakdown -->
-          <div class="card" style="margin-bottom:14px">
-            <div class="ch"><span class="ct">Service Breakdown</span><span class="cs">Per-service monthly revenue</span></div>
+          <!-- Service Breakdown — built dynamically by renderServiceBreakdown() -->
+          <div class="card" style="margin-bottom:14px" id="service-breakdown-card">
+            <div class="ch"><span class="ct">Service Breakdown</span><span class="cs">Toggle Active · enter monthly $</span></div>
             <div class="cb">
               <table class="dt" style="width:100%">
-                <tr><th>Service</th><th>Monthly Revenue</th><th></th></tr>
-                <tr><td>Freight</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
-                <tr><td>Small Parcel Shipping</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
-                <tr><td>Warehousing & Fulfillment</td><td><input class="fi" type="text" value="$42,000" style="width:100px;padding:4px 8px;font-size:11.5px"></td><td><span class="pill p-won" style="font-size:9.5px">Active</span></td></tr>
-                <tr><td>Cross-Docking</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
-                <tr><td>Value Added Services (VAS)</td><td><input class="fi" type="text" value="—" style="width:100px;padding:4px 8px;font-size:11.5px;color:var(--text3)"></td><td><span class="pill" style="background:var(--surface2);color:var(--text3);font-size:9.5px">Not selected</span></td></tr>
+                <thead><tr><th>Service</th><th style="width:120px">Monthly Revenue</th><th style="width:90px">Active</th></tr></thead>
+                <tbody id="service-breakdown-tbody"></tbody>
               </table>
               <div style="margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
                 <span style="font-size:12px;font-weight:600;color:var(--text)">Total Monthly Revenue</span>
-                <span style="font-size:16px;font-weight:700;color:var(--success)">$42,000 / mo</span>
+                <span id="service-total-monthly" style="font-size:16px;font-weight:700;color:var(--success)">—</span>
               </div>
-              <div style="margin-top:4px;text-align:right;font-size:11px;color:var(--text2)">ARR: <strong>$504,000</strong></div>
+              <div style="margin-top:4px;text-align:right;font-size:11px;color:var(--text2)">ARR: <strong id="service-total-arr">—</strong></div>
+              <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px">
+                <button class="btn btn-sm" id="service-revert-btn">Revert</button>
+                <button class="btn btn-p btn-sm" id="service-save-btn">Save Services</button>
+              </div>
             </div>
           </div>
 
@@ -945,9 +944,22 @@ textarea.fi{resize:vertical;min-height:68px}
           </div>
           <div style="padding:16px 18px">
             <div class="fg" style="margin-bottom:12px"><label class="fl2">Loss reason <span style="color:var(--danger)">*</span></label>
-              <select class="fsel"><option>— Select reason —</option><option>Price — too high</option><option>Went with competitor</option><option>No longer needed</option><option>Budget cut</option><option>No response</option><option>Other</option></select>
+              <select class="fsel" id="lost-reason">
+                <option value="">— Select reason —</option>
+                <option value="Price — too high" data-months="6">Price — too high</option>
+                <option value="Went with competitor" data-months="12">Went with competitor</option>
+                <option value="Not ready / timing" data-months="3">Not ready / timing</option>
+                <option value="No decision made" data-months="3">No decision made</option>
+                <option value="No response" data-months="6">No response</option>
+                <option value="Budget cut" data-months="6">Budget cut</option>
+                <option value="No longer needed" data-months="12">No longer needed</option>
+                <option value="Other" data-months="6">Other</option>
+              </select>
             </div>
-            <div class="fg" style="margin-bottom:16px"><label class="fl2">Re-engagement date <span style="color:var(--danger)">*</span></label><input class="fi" type="date"></div>
+            <div class="fg" style="margin-bottom:16px">
+              <label class="fl2">Re-engagement date <span style="color:var(--danger)">*</span> <span style="color:var(--text3);font-weight:400">(auto-set from reason; editable)</span></label>
+              <input class="fi" type="date" id="lost-reengagement-date">
+            </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
               <button class="btn btn-sm" onclick="document.getElementById('lost-modal').style.display='none'">Cancel</button>
               <button class="btn btn-sm" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="document.getElementById('lost-modal').style.display='none'">Confirm Lost</button>
@@ -964,7 +976,7 @@ textarea.fi{resize:vertical;min-height:68px}
           <div style="padding:16px 18px">
             <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px">Admin only · change logged on deal record · new rep notified.</div>
             <div class="fg" style="margin-bottom:12px"><label class="fl2">Assign to</label>
-              <select class="fsel"><option>Sara K. (current)</option><option>Ahmed D.</option><option>Aamer A.</option><option>James T.</option><option>Priya L.</option></select>
+              <select class="fsel"><option value="">— Select rep —</option></select>
             </div>
             <div class="fg" style="margin-bottom:16px"><label class="fl2">Reason</label><input class="fi" placeholder="e.g. territory re-alignment..."></div>
             <div style="display:flex;gap:8px;justify-content:flex-end">

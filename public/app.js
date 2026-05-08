@@ -129,6 +129,10 @@ function applyRoleToUI(me) {
   document.querySelectorAll('[onclick*="notif-settings"], [onclick*="users"], [onclick*="settings"]').forEach(el => {
     if (!isAdmin) el.style.display = 'none';
   });
+
+  // Internal dev/scope banner — admin-only (1.A, 1.B)
+  const devBanner = document.getElementById('dev-scope-banner');
+  if (devBanner) devBanner.style.display = isAdmin ? 'flex' : 'none';
 }
 
 const capitalize = s => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
@@ -249,45 +253,167 @@ function renderDashboard(dash) {
       : '<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px">No leads yet</div>';
   }
 
-  // Recent Activity — fifth .card
-  const activityCard = screen.querySelectorAll('.card')[4];
-  if (activityCard) {
-    // Pull recent activity from the loaded deals (skip — load separately)
-    const list = activityCard.querySelector('.cb .alist') || activityCard.querySelector('.cb');
-    if (list) list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px">Activity will appear here as deals progress.</div>';
+  // Recent Activity — fifth .card (1.7) — loaded async via /api/activity/recent
+  loadRecentActivity();
+}
+
+async function loadRecentActivity() {
+  const screen = document.getElementById('s-dashboard');
+  const activityCard = screen?.querySelectorAll('.card')[4];
+  if (!activityCard) return;
+  const list = activityCard.querySelector('.cb .alist') || activityCard.querySelector('.cb');
+  if (!list) return;
+  try {
+    const items = await api('/api/activity/recent?limit=10');
+    if (!items.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px">No activity yet — submit a lead or move a deal to see entries here.</div>';
+      return;
+    }
+    const dealsById = Object.fromEntries((window.__crmState.deals || []).map(d => [d.id, d]));
+    list.innerHTML = items.map(a => {
+      const dealName = dealsById[a.dealId]?.companyName || a.dealId?.slice(0, 8) || '—';
+      return `
+        <div class="ai">
+          <div class="at">${relativeTime(a.timestamp)}</div>
+          <div class="ax"><strong>${esc(dealName)}</strong> — ${esc(activityTitle(a))}${a.detail ? ` <span style="color:var(--text3)">· ${esc(a.detail)}</span>` : ''}${a.actorName ? ` <span style="color:var(--text3)">by ${esc(a.actorName)}</span>` : ''}</div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = `<div style="text-align:center;color:var(--danger);padding:18px;font-size:12px">Couldn't load activity: ${esc(err.message)}</div>`;
   }
 }
 
 function fmtCompact(n) {
+  if (!n || n === 0) return '—';
   if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
   if (n >= 1_000) return '$' + (n / 1_000).toFixed(0) + 'K';
   return '$' + Math.round(n);
+}
+
+function fmtMonthly(n) {
+  if (!n || n === 0) return '—';
+  return '$' + Math.round(n).toLocaleString() + '/mo';
+}
+
+// (416) 818-1981 from any digit-only input; preserves +1 prefix if present
+function fmtPhone(s) {
+  if (!s) return '—';
+  const digits = String(s).replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return s;
 }
 
 // ─── Pipeline Kanban render ──────────────────────────────────────────────────
 function renderPipeline(deals) {
   const kanban = document.querySelector('#s-pipeline .kanban');
   if (!kanban) return;
+
+  // Apply pipeline filters (owner + source)
+  const ownerFilter = document.getElementById('pipeline-filter-owner')?.value || '';
+  const sourceFilter = document.getElementById('pipeline-filter-source')?.value || '';
+  const visible = deals
+    .filter(d => !d.discarded && !d.mergedInto)
+    .filter(d => !ownerFilter || d.ownerUid === ownerFilter)
+    .filter(d => !sourceFilter || d.source === sourceFilter);
+
   const stages = ['New', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Contract', 'Onboarding'];
   kanban.innerHTML = stages.map(stage => {
-    const stageDeals = deals.filter(d => d.stage === stage && !d.discarded && !d.mergedInto);
+    const stageDeals = visible.filter(d => d.stage === stage);
+    const empty = stageDeals.length === 0
+      ? `<div style="padding:12px;text-align:center;font-size:10.5px;color:var(--text3);font-style:italic">No deals</div>`
+      : '';
     return `
       <div class="kc" data-stage="${esc(stage)}" data-dropzone>
         <div class="kh">${esc(stage)}<span class="kbadge">${stageDeals.length}</span></div>
         ${stageDeals.map(d => dealCardHtml(d)).join('')}
+        ${empty}
       </div>`;
   }).join('');
   wireKanbanDragDrop();
+
+  // Pipeline header stats — replaces hardcoded "24 active deals · $1.84M"
+  const activeDeals = visible.filter(d => !['Closed Won', 'Closed Lost'].includes(d.stage));
+  const pipelineValue = activeDeals.reduce((s, d) => s + (d.arr || 0), 0);
+  const headerStats = document.getElementById('pipeline-header-stats');
+  if (headerStats) {
+    headerStats.textContent = `${visible.length} deal${visible.length === 1 ? '' : 's'} · ${fmtCompact(pipelineValue)} pipeline`;
+  }
+
+  // Populate the owner filter dropdown from real users (G.1)
+  populateOwnerDropdowns();
 }
+
+// Re-render pipeline when filters change
+window.applyPipelineFilters = () => {
+  renderPipeline(window.__crmState.deals || []);
+};
+
+// ─── Owner dropdown population (G.1) ─────────────────────────────────────────
+// Single source of truth: pull from /api/users → populate every owner dropdown
+// in the app (Leads filter, Pipeline filter, Deal Detail Change Rep modal,
+// Manual Lead Entry "owner" select).
+function populateOwnerDropdowns() {
+  const users = window.__crmState.users || [];
+  const repsAndAdmins = users.filter(u => u.role === 'rep' || u.role === 'admin');
+
+  // Leads filter — keep "All Owners" + clear list, then add real users
+  const leadsFilter = document.getElementById('lead-filter-owner');
+  if (leadsFilter) {
+    const current = leadsFilter.value;
+    leadsFilter.innerHTML = '<option value="">All Owners</option>' +
+      repsAndAdmins.map(u => `<option value="${esc(u.displayName)}">${esc(u.displayName)}</option>`).join('');
+    leadsFilter.value = current;
+  }
+
+  // Pipeline filter — uses uid to match deal.ownerUid
+  const pipelineFilter = document.getElementById('pipeline-filter-owner');
+  if (pipelineFilter) {
+    const current = pipelineFilter.value;
+    pipelineFilter.innerHTML = '<option value="">All Owners</option>' +
+      repsAndAdmins.map(u => `<option value="${esc(u.uid)}">${esc(u.displayName)}</option>`).join('');
+    pipelineFilter.value = current;
+  }
+
+  // Rep reassignment modal in Deal Detail — uses uid
+  const repModal = document.querySelector('#rep-modal select.fsel');
+  if (repModal) {
+    const current = repModal.value;
+    repModal.innerHTML = repsAndAdmins.map(u =>
+      `<option value="${esc(u.uid)}">${esc(u.displayName)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`
+    ).join('');
+    if (current) repModal.value = current;
+  }
+
+  // Deal Detail "Owner" inline select
+  const dealOwner = document.getElementById('deal-owner-select');
+  if (dealOwner) {
+    const current = dealOwner.value;
+    dealOwner.innerHTML = repsAndAdmins.map(u =>
+      `<option value="${esc(u.uid)}">${esc(u.displayName)}</option>`
+    ).join('');
+    if (current) dealOwner.value = current;
+  }
+}
+document.addEventListener('change', e => {
+  if (e.target?.id === 'pipeline-filter-owner' || e.target?.id === 'pipeline-filter-source') {
+    window.applyPipelineFilters();
+  }
+});
 
 function dealCardHtml(d) {
   const ownerColor = pickOwnerColor(d.ownerUid || d.ownerName || '');
   const wonClass = d.stage === 'Closed Won' ? ' won' : '';
+  const monthly = d.monthlyRevenue || 0;
   return `
     <div class="kcard${wonClass}" draggable="true" data-deal-id="${esc(d.id)}" onclick="window.openDeal('${esc(d.id)}')">
       <div class="kcard-n">${esc(d.companyName)}${d.duplicateFlag ? ' <span style="color:#cc3d3d" title="Possible duplicate">⚠</span>' : ''}</div>
       <div class="kcard-m">${esc((d.services && d.services[0]?.name) || 'Services TBD')} · ${esc(d.source || '')}</div>
-      <div class="kcard-v">$${(d.monthlyRevenue || 0).toLocaleString()}/mo</div>
+      <div class="kcard-v" style="${monthly === 0 ? 'color:var(--text3)' : ''}">${fmtMonthly(monthly)}</div>
       <div class="kcard-o"><div class="odot" style="background:${ownerColor}"></div>${esc(d.ownerName || 'Unassigned')}</div>
     </div>`;
 }
@@ -384,19 +510,21 @@ function renderLeadsTable(deals) {
     'Onboarding': 'p-ob', 'Closed Lost': 'p-lost',
   };
   const visible = deals.filter(d => !d.discarded && !d.mergedInto);
-  tbody.innerHTML = visible.map(d => `
+  tbody.innerHTML = visible.map(d => {
+    const monthly = d.monthlyRevenue || 0;
+    return `
     <tr onclick="window.openDeal('${esc(d.id)}')">
       <td><strong>${esc(d.companyName)}</strong>${d.duplicateFlag ? ' <span class="dup-badge">⚠ Dup</span>' : ''}</td>
-      <td>${esc(d.contactName || '')}</td>
-      <td>${esc(d.industry || '')}</td>
-      <td>${esc(d.source || '')}</td>
-      <td data-val="${d.monthlyRevenue || 0}">$${((d.monthlyRevenue || 0) / 1000).toFixed(1)}K/mo</td>
+      <td>${esc(d.contactName) || '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${esc(d.industry) || '<span style="color:var(--text3)">—</span>'}</td>
+      <td>${esc(d.source) || '<span style="color:var(--text3)">—</span>'}</td>
+      <td data-val="${monthly}" ${monthly === 0 ? 'style="color:var(--text3)"' : ''}>${fmtMonthly(monthly)}</td>
       <td><span class="pill ${stagePill[d.stage] || 'p-new'}">${esc(d.stage)}</span></td>
       <td>${esc(d.ownerName || 'Unassigned')}</td>
       <td data-val="${-(d.updatedAt?._seconds || 0)}">${relativeTime(d.updatedAt)}</td>
       <td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px" onclick="event.stopPropagation();window.openDeal('${esc(d.id)}')">View</button></td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
   const count = document.getElementById('lead-count');
   if (count) count.textContent = `${visible.length} lead${visible.length === 1 ? '' : 's'}`;
 }
@@ -511,12 +639,17 @@ function renderDealDetail(d, activity) {
   const dupBadge = titleSpan?.parentElement?.querySelector('.dup-badge');
   if (dupBadge) dupBadge.style.display = d.duplicateFlag ? '' : 'none';
 
-  // Info rows
+  // Info rows — formatted phone, dash for empty
   const info = screen.querySelectorAll('.drow .dv');
   if (info[0]) info[0].textContent = d.companyName || '—';
   if (info[1]) info[1].textContent = d.contactName || '—';
   if (info[2]) info[2].textContent = d.contactEmail || '—';
-  if (info[3]) info[3].textContent = d.contactPhone || '—';
+  if (info[3]) info[3].textContent = fmtPhone(d.contactPhone);
+  // Top breadcrumb / title bar should reflect this deal (4.1)
+  const tbTitle = document.getElementById('tb-title');
+  if (tbTitle && screen.classList.contains('on')) {
+    tbTitle.textContent = `Deal Detail — ${d.companyName}`;
+  }
   // Industry/source/owner are selects; leave them for quick-edit
 
   // Activity log
@@ -539,6 +672,10 @@ function renderDealDetail(d, activity) {
   const idMarker = document.createElement('input');
   idMarker.type = 'hidden'; idMarker.id = 'deal-detail-id'; idMarker.value = d.id;
   screen.prepend(idMarker);
+
+  // Service Breakdown: dynamic rows + auto-recalc (4.3, 4.4a, 4.4b)
+  renderServiceBreakdown(d);
+  wireServiceBreakdownButtons();
 
   // Duplicate review controls for admins with a flag set
   renderDuplicateBanner(d);
@@ -574,6 +711,137 @@ function stagePillClass(stage) {
     'Negotiation': 'p-neg', 'Closed Won': 'p-won', 'Contract': 'p-con',
     'Onboarding': 'p-ob', 'Closed Lost': 'p-lost',
   }[stage] || 'p-new';
+}
+
+// ─── Service Breakdown (4.3, 4.4a, 4.4b) ────────────────────────────────────
+const SERVICE_CATALOG = [
+  'Freight',
+  'Small Parcel Shipping',
+  'Warehousing & Fulfillment',
+  'Cross-Docking',
+  'Value Added Services (VAS)',
+];
+
+function renderServiceBreakdown(deal) {
+  const tbody = document.getElementById('service-breakdown-tbody');
+  if (!tbody) return;
+  // Map existing services on the deal by name → revenue
+  const existing = {};
+  (deal.services || []).forEach(s => {
+    existing[s.name] = Number(s.monthlyRevenue) || 0;
+  });
+
+  tbody.innerHTML = SERVICE_CATALOG.map(name => {
+    const rev = existing[name] || 0;
+    const active = name in existing && rev > 0;
+    return `
+      <tr data-svc="${esc(name)}">
+        <td>${esc(name)}</td>
+        <td>
+          <input class="fi service-rev-input" type="number" min="0" step="100"
+                 value="${active ? rev : ''}" placeholder="—"
+                 ${active ? '' : 'disabled style="background:var(--surface);color:var(--text3)"'}
+                 style="width:100%;padding:4px 8px;font-size:11.5px">
+        </td>
+        <td>
+          <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+            <input type="checkbox" class="service-active-cb" ${active ? 'checked' : ''}>
+            <span>${active ? 'Active' : 'Off'}</span>
+          </label>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // Wire toggle + input recalc
+  tbody.querySelectorAll('.service-active-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const row = cb.closest('tr');
+      const input = row.querySelector('.service-rev-input');
+      const label = cb.parentElement.querySelector('span');
+      if (cb.checked) {
+        input.disabled = false;
+        input.style.background = '';
+        input.style.color = '';
+        label.textContent = 'Active';
+        if (!input.value) input.focus();
+      } else {
+        input.disabled = true;
+        input.value = '';
+        input.style.background = 'var(--surface)';
+        input.style.color = 'var(--text3)';
+        label.textContent = 'Off';
+      }
+      recalcServiceTotals();
+    });
+  });
+  tbody.querySelectorAll('.service-rev-input').forEach(input => {
+    input.addEventListener('input', recalcServiceTotals);
+  });
+
+  recalcServiceTotals();
+}
+
+function recalcServiceTotals() {
+  const tbody = document.getElementById('service-breakdown-tbody');
+  if (!tbody) return;
+  let total = 0;
+  tbody.querySelectorAll('tr').forEach(row => {
+    const cb = row.querySelector('.service-active-cb');
+    const input = row.querySelector('.service-rev-input');
+    if (cb?.checked) total += Number(input?.value) || 0;
+  });
+  const monthlyEl = document.getElementById('service-total-monthly');
+  const arrEl = document.getElementById('service-total-arr');
+  if (monthlyEl) {
+    monthlyEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString() + ' / mo';
+    monthlyEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
+  }
+  if (arrEl) {
+    arrEl.textContent = total === 0 ? '—' : '$' + (total * 12).toLocaleString();
+  }
+}
+
+function gatherCurrentServices() {
+  const tbody = document.getElementById('service-breakdown-tbody');
+  if (!tbody) return [];
+  const services = [];
+  tbody.querySelectorAll('tr').forEach(row => {
+    const cb = row.querySelector('.service-active-cb');
+    const input = row.querySelector('.service-rev-input');
+    const name = row.dataset.svc;
+    if (cb?.checked && Number(input?.value) > 0) {
+      services.push({ name, monthlyRevenue: Number(input.value) });
+    }
+  });
+  return services;
+}
+
+function wireServiceBreakdownButtons() {
+  const saveBtn = document.getElementById('service-save-btn');
+  if (saveBtn && !saveBtn.dataset.wired) {
+    saveBtn.dataset.wired = '1';
+    saveBtn.onclick = async () => {
+      const id = document.getElementById('deal-detail-id')?.value;
+      if (!id) return;
+      const services = gatherCurrentServices();
+      try {
+        await api(`/api/deals/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ services }),
+        });
+        toast('Services saved · tier and ARR recalculated', 'ok');
+        await refreshAll();
+        openDeal(id);
+      } catch (err) { toast(err.message, 'error'); }
+    };
+  }
+  const revertBtn = document.getElementById('service-revert-btn');
+  if (revertBtn && !revertBtn.dataset.wired) {
+    revertBtn.dataset.wired = '1';
+    revertBtn.onclick = () => {
+      if (window.__crmState.currentDeal) renderServiceBreakdown(window.__crmState.currentDeal);
+    };
+  }
 }
 
 function renderDuplicateBanner(d) {
@@ -632,15 +900,28 @@ function wireDealDetailHandlers() {
     };
   }
 
-  // Lost modal
+  // Lost modal — wire reason → auto-fill re-engagement date (4.7a, 4.7b)
+  const lostReason = document.getElementById('lost-reason');
+  const lostDateInput = document.getElementById('lost-reengagement-date');
+  if (lostReason && lostDateInput && !lostReason.dataset.wired) {
+    lostReason.dataset.wired = '1';
+    lostReason.addEventListener('change', () => {
+      const months = Number(lostReason.options[lostReason.selectedIndex]?.dataset.months) || 6;
+      const d = new Date();
+      d.setMonth(d.getMonth() + months);
+      lostDateInput.value = d.toISOString().slice(0, 10);
+    });
+  }
+
   const lostBtn = document.querySelector('#lost-modal [style*="danger"]');
   if (lostBtn && !lostBtn.dataset.wired) {
     lostBtn.dataset.wired = '1';
     lostBtn.onclick = async () => {
       const id = document.getElementById('deal-detail-id')?.value;
-      const reasonSel = document.querySelector('#lost-modal select');
-      const dateInput = document.querySelector('#lost-modal input[type="date"]');
-      if (!id || !reasonSel || !dateInput.value) return toast('Fill all required fields', 'warn');
+      const reasonSel = document.getElementById('lost-reason');
+      const dateInput = document.getElementById('lost-reengagement-date');
+      if (!id || !reasonSel?.value) return toast('Pick a loss reason', 'warn');
+      if (!dateInput?.value) return toast('Set a re-engagement date', 'warn');
       try {
         await api(`/api/deals/${id}/stage`, {
           method: 'POST',
@@ -652,7 +933,7 @@ function wireDealDetailHandlers() {
         });
         document.getElementById('lost-modal').style.display = 'none';
         toast('Marked as Closed Lost', 'ok');
-        await refreshPipeline();
+        await refreshAll();
         openDeal(id);
       } catch (err) { toast(err.message, 'error'); }
     };
@@ -666,28 +947,21 @@ function wireDealDetailHandlers() {
       const id = document.getElementById('deal-detail-id')?.value;
       const sel = document.querySelector('#rep-modal select');
       const reason = document.querySelector('#rep-modal input')?.value;
-      if (!id || !sel) return;
-      const newOwner = (window.__crmState.users || []).find(u => u.displayName === sel.value.replace(/\s*\(current\)\s*$/, ''));
-      if (!newOwner) return toast('Unknown rep', 'warn');
+      if (!id || !sel || !sel.value) return toast('Pick a rep first', 'warn');
+      const newOwnerUid = sel.value;
       try {
         await api(`/api/deals/${id}/reassign`, {
-          method: 'POST', body: JSON.stringify({ newOwnerUid: newOwner.uid, reason }),
+          method: 'POST', body: JSON.stringify({ newOwnerUid, reason }),
         });
         document.getElementById('rep-modal').style.display = 'none';
         toast('Rep reassigned', 'ok');
-        await refreshPipeline();
+        await refreshAll();
         openDeal(id);
       } catch (err) { toast(err.message, 'error'); }
     };
-
-    // Populate rep dropdown from real users
-    const repSel = document.querySelector('#rep-modal select');
-    if (repSel) {
-      repSel.innerHTML = (window.__crmState.users || [])
-        .filter(u => u.role === 'rep' || u.role === 'admin')
-        .map(u => `<option value="${esc(u.uid)}">${esc(u.displayName)}</option>`).join('');
-    }
   }
+  // Always re-populate dropdown from current users list (called by populateOwnerDropdowns)
+  populateOwnerDropdowns();
 
   // Log note
   const logBtn = document.querySelector('#s-deal .card:nth-of-type(2) .btn-p');
