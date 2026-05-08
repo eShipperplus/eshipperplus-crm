@@ -1472,17 +1472,17 @@ textarea.fi{resize:vertical;min-height:68px}
       <div class="card" style="max-width:720px">
         <div class="ch"><span class="ct">Pipeline Stage Probability Weights</span><span class="cs">Used for weighted forecast</span></div>
         <div class="cb">
-          <table class="dt">
-            <tr><th>Stage</th><th>Probability</th><th>Notes</th></tr>
-            <tr><td><span class="pill p-new">New</span></td><td><input class="fi" style="width:70px" value="10%"></td><td style="color:var(--text3)">Uncontacted leads</td></tr>
-            <tr><td><span class="pill p-qual">Qualified</span></td><td><input class="fi" style="width:70px" value="25%"></td><td style="color:var(--text3)">Discovery complete</td></tr>
-            <tr><td><span class="pill p-prop">Proposal</span></td><td><input class="fi" style="width:70px" value="40%"></td><td style="color:var(--text3)">Quote sent</td></tr>
-            <tr><td><span class="pill p-neg">Negotiation</span></td><td><input class="fi" style="width:70px" value="65%"></td><td style="color:var(--text3)">Active negotiation</td></tr>
-            <tr><td><span class="pill p-won">Closed Won</span></td><td><input class="fi" style="width:70px" value="90%"></td><td style="color:var(--text3)">Verbal commit</td></tr>
-            <tr><td><span class="pill p-con">Contract</span></td><td><input class="fi" style="width:70px" value="95%"></td><td style="color:var(--text3)">Docs in progress</td></tr>
-            <tr><td><span class="pill p-ob">Onboarding</span></td><td><input class="fi" style="width:70px" value="100%"></td><td style="color:var(--text3)">Deal closed</td></tr>
+          <table class="dt" id="stage-weights-table">
+            <tr><th>Stage</th><th>Probability %</th><th>Notes</th></tr>
+            <tr><td><span class="pill p-new">New</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="New" style="width:80px" value="10"></td><td style="color:var(--text3)">Uncontacted leads</td></tr>
+            <tr><td><span class="pill p-qual">Qualified</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Qualified" style="width:80px" value="25"></td><td style="color:var(--text3)">Discovery complete</td></tr>
+            <tr><td><span class="pill p-prop">Proposal Sent</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Proposal Sent" style="width:80px" value="40"></td><td style="color:var(--text3)">Quote sent</td></tr>
+            <tr><td><span class="pill p-neg">Negotiation</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Negotiation" style="width:80px" value="65"></td><td style="color:var(--text3)">Active negotiation</td></tr>
+            <tr><td><span class="pill p-won">Closed Won</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Closed Won" style="width:80px" value="90"></td><td style="color:var(--text3)">Verbal commit</td></tr>
+            <tr><td><span class="pill p-con">Contract</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Contract" style="width:80px" value="95"></td><td style="color:var(--text3)">Docs in progress</td></tr>
+            <tr><td><span class="pill p-ob">Onboarding</span></td><td><input class="fi pct-input" type="number" min="0" max="100" data-stage="Onboarding" style="width:80px" value="100"></td><td style="color:var(--text3)">Deal closed</td></tr>
           </table>
-          <button class="btn btn-p" style="margin-top:12px">Save Weights</button>
+          <button class="btn btn-p" style="margin-top:12px" id="save-stage-weights-btn">Save Weights</button>
         </div>
       </div>
       
@@ -1515,45 +1515,22 @@ textarea.fi{resize:vertical;min-height:68px}
           <div style="font-size:11.5px;color:var(--text2);margin-bottom:12px;background:var(--surface);border-radius:6px;padding:10px 12px">
             These cost rates are used to calculate gross margin, contribution margin, and net profit on each deal. Set them as a % of revenue or as a fixed $ amount per unit. They apply globally until changed.
           </div>
-          <table class="dt" style="width:100%">
-            <tr><th>Service</th><th>Cost Rate</th><th>Method</th><th>Last Updated</th></tr>
-            <tr>
-              <td>Warehousing & Fulfillment</td>
-              <td><input class="fi" value="60%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
-              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per pallet</option><option>$ per order</option></select></td>
-              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
-            </tr>
-            <tr>
-              <td>Freight</td>
-              <td><input class="fi" value="72%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
-              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per shipment</option><option>$ per skid</option></select></td>
-              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
-            </tr>
-            <tr>
-              <td>Small Parcel Shipping</td>
-              <td><input class="fi" value="68%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
-              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per shipment</option></select></td>
-              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
-            </tr>
-            <tr>
-              <td>Cross-Docking</td>
-              <td><input class="fi" value="55%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
-              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per pallet</option></select></td>
-              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
-            </tr>
-            <tr>
-              <td>Value Added Services (VAS)</td>
-              <td><input class="fi" value="50%" style="width:80px;padding:4px 8px;font-size:11.5px"></td>
-              <td><select class="fsel" style="font-size:11px;padding:3px 6px"><option>% of revenue</option><option>$ per hour</option></select></td>
-              <td style="color:var(--text3);font-size:11px">Apr 1, 2026</td>
-            </tr>
+          <table class="dt" style="width:100%" id="cost-rates-table">
+            <thead><tr><th>Service</th><th>Cost Rate %</th><th>Last Updated</th></tr></thead>
+            <tbody>
+              <tr data-svc="Warehousing & Fulfillment"><td>Warehousing & Fulfillment</td><td><input class="fi cost-rate-input" data-svc="Warehousing & Fulfillment" type="number" min="0" max="100" placeholder="60" style="width:90px;padding:4px 8px;font-size:11.5px"></td><td class="cost-updated" style="color:var(--text3);font-size:11px">—</td></tr>
+              <tr data-svc="Freight"><td>Freight</td><td><input class="fi cost-rate-input" data-svc="Freight" type="number" min="0" max="100" placeholder="72" style="width:90px;padding:4px 8px;font-size:11.5px"></td><td class="cost-updated" style="color:var(--text3);font-size:11px">—</td></tr>
+              <tr data-svc="Small Parcel Shipping"><td>Small Parcel Shipping</td><td><input class="fi cost-rate-input" data-svc="Small Parcel Shipping" type="number" min="0" max="100" placeholder="68" style="width:90px;padding:4px 8px;font-size:11.5px"></td><td class="cost-updated" style="color:var(--text3);font-size:11px">—</td></tr>
+              <tr data-svc="Cross-Docking"><td>Cross-Docking</td><td><input class="fi cost-rate-input" data-svc="Cross-Docking" type="number" min="0" max="100" placeholder="55" style="width:90px;padding:4px 8px;font-size:11.5px"></td><td class="cost-updated" style="color:var(--text3);font-size:11px">—</td></tr>
+              <tr data-svc="Value Added Services (VAS)"><td>Value Added Services (VAS)</td><td><input class="fi cost-rate-input" data-svc="Value Added Services (VAS)" type="number" min="0" max="100" placeholder="50" style="width:90px;padding:4px 8px;font-size:11.5px"></td><td class="cost-updated" style="color:var(--text3);font-size:11px">—</td></tr>
+            </tbody>
           </table>
           <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="fg"><label class="fl2">Monthly Fixed Overhead Pool</label><input class="fi" value="$85,000" placeholder="Total fixed costs / month"></div>
-            <div class="fg"><label class="fl2">Variable Costs Beyond Direct (% of revenue)</label><input class="fi" value="7%" placeholder="e.g. 7%"></div>
+            <div class="fg"><label class="fl2">Monthly Fixed Overhead Pool</label><input class="fi money-input" id="cost-overhead-pool" placeholder="Total fixed costs / month"></div>
+            <div class="fg"><label class="fl2">Variable Costs Beyond Direct (% of revenue)</label><input class="fi" id="cost-variable-pct" type="number" min="0" max="100" step="0.5" placeholder="7"></div>
           </div>
-          <div style="margin-top:4px;font-size:10.5px;color:var(--text3)">Fixed overhead is allocated to each deal in proportion to its revenue share of your total pipeline. Variable costs cover labour, admin, etc. above direct service cost.</div>
-          <button class="btn btn-p btn-sm" style="margin-top:14px">Save Cost Inputs</button>
+          <div style="margin-top:4px;font-size:10.5px;color:var(--text3)">Phase 2 — saved here for when the Profitability panel ships. Fixed overhead allocates per deal in proportion to its revenue share. Variable covers labour, admin, etc.</div>
+          <button class="btn btn-p btn-sm" style="margin-top:14px" id="save-cost-inputs-btn">Save Cost Inputs</button>
         </div>
       </div>
 
@@ -1564,18 +1541,19 @@ textarea.fi{resize:vertical;min-height:68px}
           <div style="background:var(--info-bg);border-radius:6px;padding:9px 12px;font-size:11.5px;color:var(--text2);margin-bottom:14px">
             Upload a CSV or Excel file with two columns: <strong>Company Name</strong> and <strong>Rep Name</strong>. Header row required. Changes take effect immediately.
           </div>
-          <div style="margin-bottom:14px">
-            <table class="dt" style="width:100%">
-              <tr><th>Company Name</th><th>Rep Name</th><th>Added</th><th></th></tr>
-              <tr><td>Acme Logistics Brokers</td><td>Jordan Smith</td><td>Apr 10, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
-              <tr><td>NorthStar Partners</td><td>Leila Hassan</td><td>Apr 10, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
-              <tr><td>Apex Freight Group</td><td>Mike Torres</td><td>Apr 12, 2026</td><td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)">Remove</button></td></tr>
+          <div style="margin-bottom:14px;max-height:280px;overflow-y:auto">
+            <table class="dt" style="width:100%" id="partner-reps-table">
+              <thead><tr><th>Company Name</th><th>Rep Name</th><th></th></tr></thead>
+              <tbody id="partner-reps-tbody">
+                <tr><td colspan="3" style="text-align:center;padding:14px;color:var(--text3);font-size:11px">Loading…</td></tr>
+              </tbody>
             </table>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <button class="btn btn-p btn-sm">⬆ Upload CSV / Excel</button>
-            <button class="btn btn-sm">⬇ Download Current List</button>
-            <span style="font-size:10.5px;color:var(--text3)">3 reps · last updated Apr 12, 2026</span>
+            <input type="file" id="partner-reps-file" accept=".csv,.xlsx,.xls" style="display:none">
+            <button class="btn btn-p btn-sm" id="partner-reps-upload-btn">⬆ Upload CSV / Excel</button>
+            <button class="btn btn-sm" id="partner-reps-download-btn">⬇ Download Current List</button>
+            <span id="partner-reps-meta" style="font-size:10.5px;color:var(--text3)">—</span>
           </div>
         </div>
       </div>
@@ -1586,19 +1564,23 @@ textarea.fi{resize:vertical;min-height:68px}
         <div class="cb">
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)">
-              <div><strong>Match on company name</strong><div style="font-size:10.5px;color:var(--text3)">Fuzzy match — flags if ≥ 80% similar</div></div>
-              <input type="checkbox" checked>
+              <div><strong>Match on company name</strong><div style="font-size:10.5px;color:var(--text3)">Fuzzy match — flags if similarity ≥ threshold below</div></div>
+              <input type="checkbox" id="dup-match-company" checked>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)">
               <div><strong>Match on contact email</strong><div style="font-size:10.5px;color:var(--text3)">Exact match</div></div>
-              <input type="checkbox" checked>
+              <input type="checkbox" id="dup-match-email" checked>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div><strong>Match on phone number</strong><div style="font-size:10.5px;color:var(--text3)">Exact match — company name must also match</div></div>
+              <input type="checkbox" id="dup-match-phone" checked>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 0">
-              <div><strong>Match on phone number</strong><div style="font-size:10.5px;color:var(--text3)">Exact match — company name must also match</div></div>
-              <input type="checkbox" checked>
+              <div><strong>Company-name fuzzy threshold</strong><div style="font-size:10.5px;color:var(--text3)">0.80 = 80% similar</div></div>
+              <input class="fi" type="number" min="0.5" max="1" step="0.05" id="dup-fuzzy-threshold" value="0.80" style="width:80px">
             </div>
           </div>
-          <button class="btn btn-p btn-sm" style="margin-top:12px">Save Detection Settings</button>
+          <button class="btn btn-p btn-sm" style="margin-top:12px" id="save-detection-btn">Save Detection Settings</button>
         </div>
       </div>
 

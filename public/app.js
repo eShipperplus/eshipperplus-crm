@@ -166,6 +166,7 @@ async function bootAppData() {
     wirePartnerPortalScreen();
     wireRefListAddButtons();
     await loadReferenceLists();
+    wireSettingsSaveButtons();
     setupAutoRefresh();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
@@ -1529,6 +1530,200 @@ function wireUserManagement() {
         renderUsers(users);
       } catch (err) { toast(err.message, 'error'); }
     };
+  }
+}
+
+// ─── Settings page — all the save buttons ──────────────────────────────────
+function wireSettingsSaveButtons() {
+  if (currentUser?.role !== 'admin') return;
+
+  // Save Stage Weights
+  const stageBtn = document.getElementById('save-stage-weights-btn');
+  if (stageBtn && !stageBtn.dataset.wired) {
+    stageBtn.dataset.wired = '1';
+    stageBtn.addEventListener('click', async () => {
+      const payload = {};
+      document.querySelectorAll('#stage-weights-table .pct-input').forEach(inp => {
+        const stage = inp.dataset.stage;
+        const pct = Number(inp.value);
+        if (!isFinite(pct) || pct < 0 || pct > 100) return;
+        payload[stage] = pct / 100; // store as 0.00–1.00
+      });
+      try {
+        await api('/api/settings/stage_weights', { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Stage weights saved · weighted forecast will use them', 'ok');
+        await refreshAll();
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+    });
+    // Load saved values on first wire
+    api('/api/settings/stage_weights').then(cfg => {
+      document.querySelectorAll('#stage-weights-table .pct-input').forEach(inp => {
+        const stage = inp.dataset.stage;
+        if (cfg[stage] != null) inp.value = Math.round(cfg[stage] * 100);
+      });
+    }).catch(() => {});
+  }
+
+  // Save Cost Inputs
+  const costBtn = document.getElementById('save-cost-inputs-btn');
+  if (costBtn && !costBtn.dataset.wired) {
+    costBtn.dataset.wired = '1';
+    costBtn.addEventListener('click', async () => {
+      const rates = {};
+      document.querySelectorAll('.cost-rate-input').forEach(inp => {
+        const v = Number(inp.value);
+        if (isFinite(v)) rates[inp.dataset.svc] = v / 100;
+      });
+      const payload = {
+        rates,
+        overheadPool: parseMoney(document.getElementById('cost-overhead-pool')?.value),
+        variablePct: Number(document.getElementById('cost-variable-pct')?.value) / 100 || 0,
+      };
+      try {
+        await api('/api/settings/cost_inputs', { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Cost inputs saved (Phase 2 — will drive Profitability panel)', 'ok');
+        // Update timestamps
+        const now = new Date().toLocaleDateString();
+        document.querySelectorAll('#cost-rates-table .cost-updated').forEach(td => td.textContent = now);
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+    });
+    // Load saved values
+    api('/api/settings/cost_inputs').then(cfg => {
+      const rates = cfg.rates || {};
+      document.querySelectorAll('.cost-rate-input').forEach(inp => {
+        const v = rates[inp.dataset.svc];
+        if (v != null) inp.value = Math.round(v * 100);
+      });
+      const pool = document.getElementById('cost-overhead-pool');
+      const variable = document.getElementById('cost-variable-pct');
+      if (pool && cfg.overheadPool) pool.value = '$' + Number(cfg.overheadPool).toLocaleString();
+      if (variable && cfg.variablePct != null) variable.value = (cfg.variablePct * 100).toFixed(1);
+    }).catch(() => {});
+  }
+
+  // Save Duplicate Detection
+  const detectionBtn = document.getElementById('save-detection-btn');
+  if (detectionBtn && !detectionBtn.dataset.wired) {
+    detectionBtn.dataset.wired = '1';
+    detectionBtn.addEventListener('click', async () => {
+      const payload = {
+        matchCompany: document.getElementById('dup-match-company')?.checked ?? true,
+        matchEmail:   document.getElementById('dup-match-email')?.checked ?? true,
+        matchPhone:   document.getElementById('dup-match-phone')?.checked ?? true,
+        fuzzyThreshold: Number(document.getElementById('dup-fuzzy-threshold')?.value) || 0.8,
+      };
+      // Stored under notification_rules.duplicateDetection so the engine sees it
+      // alongside the other settings (single doc fetch).
+      try {
+        const current = await api('/api/settings/notification_rules').catch(() => ({}));
+        await api('/api/settings/notification_rules', {
+          method: 'PUT',
+          body: JSON.stringify({ ...current, duplicateDetection: payload }),
+        });
+        toast('Duplicate detection settings saved', 'ok');
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+    });
+    // Load saved values
+    api('/api/settings/notification_rules').then(cfg => {
+      const dup = cfg.duplicateDetection || {};
+      const cb1 = document.getElementById('dup-match-company');
+      const cb2 = document.getElementById('dup-match-email');
+      const cb3 = document.getElementById('dup-match-phone');
+      const ft = document.getElementById('dup-fuzzy-threshold');
+      if (cb1) cb1.checked = dup.matchCompany !== false;
+      if (cb2) cb2.checked = dup.matchEmail !== false;
+      if (cb3) cb3.checked = dup.matchPhone !== false;
+      if (ft && dup.fuzzyThreshold) ft.value = dup.fuzzyThreshold;
+    }).catch(() => {});
+  }
+
+  // Partner Rep Directory — live data + upload + download
+  wirePartnerRepDirectory();
+}
+
+// ─── Partner Rep Directory live editor ─────────────────────────────────────
+function wirePartnerRepDirectory() {
+  const tbody = document.getElementById('partner-reps-tbody');
+  const meta = document.getElementById('partner-reps-meta');
+  const fileInput = document.getElementById('partner-reps-file');
+  const uploadBtn = document.getElementById('partner-reps-upload-btn');
+  const downloadBtn = document.getElementById('partner-reps-download-btn');
+  if (!tbody) return;
+
+  const renderTable = (entries) => {
+    if (!entries || !entries.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:14px;color:var(--text3);font-size:11px">No reps yet — upload a CSV/Excel below.</td></tr>';
+      if (meta) meta.textContent = 'No directory loaded';
+      return;
+    }
+    tbody.innerHTML = entries.map((e, i) => `
+      <tr>
+        <td>${esc(e.company)}</td>
+        <td>${esc(e.repName)}</td>
+        <td><button class="btn btn-sm" style="padding:2px 8px;font-size:10px;color:var(--danger)" onclick="window.removePartnerRep(${i})">Remove</button></td>
+      </tr>`).join('');
+    if (meta) meta.textContent = `${entries.length} rep${entries.length === 1 ? '' : 's'}`;
+  };
+
+  // Load
+  api('/api/settings/partner_rep_directory').then(cfg => {
+    window.__crmState.partnerReps = cfg.entries || [];
+    renderTable(window.__crmState.partnerReps);
+  }).catch(() => renderTable([]));
+
+  // Remove
+  window.removePartnerRep = async (idx) => {
+    const entries = (window.__crmState.partnerReps || []).filter((_, i) => i !== idx);
+    window.__crmState.partnerReps = entries;
+    renderTable(entries);
+    try {
+      await api('/api/settings/partner_rep_directory', {
+        method: 'PUT', body: JSON.stringify({ entries, rowCount: entries.length }),
+      });
+      toast('Removed', 'ok');
+    } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+  };
+
+  // Upload
+  if (uploadBtn && !uploadBtn.dataset.wired) {
+    uploadBtn.dataset.wired = '1';
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      if (!fileInput.files?.length) return;
+      const fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      try {
+        const token = await getIdToken();
+        const res = await fetch('/api/settings/partner-rep-directory/upload', {
+          method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error);
+        toast(`Uploaded — ${j.count} rows`, 'ok');
+        const cfg = await api('/api/settings/partner_rep_directory');
+        window.__crmState.partnerReps = cfg.entries || [];
+        renderTable(window.__crmState.partnerReps);
+      } catch (err) { toast(err.message, 'error'); }
+      fileInput.value = '';
+    });
+  }
+
+  // Download
+  if (downloadBtn && !downloadBtn.dataset.wired) {
+    downloadBtn.dataset.wired = '1';
+    downloadBtn.addEventListener('click', () => {
+      const entries = window.__crmState.partnerReps || [];
+      if (!entries.length) return toast('Directory is empty', 'warn');
+      const csv = 'Company Name,Rep Name\n' +
+        entries.map(e => `"${(e.company || '').replace(/"/g, '""')}","${(e.repName || '').replace(/"/g, '""')}"`).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `partner-rep-directory-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Downloaded ${entries.length} reps`, 'ok');
+    });
   }
 }
 

@@ -613,10 +613,17 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
   const active = deals.filter(d => !['Closed Lost'].includes(d.stage) && !d.discarded && !d.mergedInto);
   const totalPipeline = active.reduce((s, d) => s + (d.arr || 0), 0);
 
+  const cfgSnap = await db.collection('crm_config').doc('stage_weights').get();
+  const savedWeights = cfgSnap.exists ? cfgSnap.data() : {};
   const stageWeight = {
-    'New': 0.10, 'Qualified': 0.25, 'Proposal Sent': 0.40,
-    'Negotiation': 0.65, 'Closed Won': 0.90, 'Contract': 0.95,
-    'Onboarding': 1.00, 'Closed Lost': 0,
+    'New':           savedWeights['New']           ?? 0.10,
+    'Qualified':     savedWeights['Qualified']     ?? 0.25,
+    'Proposal Sent': savedWeights['Proposal Sent'] ?? 0.40,
+    'Negotiation':   savedWeights['Negotiation']   ?? 0.65,
+    'Closed Won':    savedWeights['Closed Won']    ?? 0.90,
+    'Contract':      savedWeights['Contract']      ?? 0.95,
+    'Onboarding':    savedWeights['Onboarding']    ?? 1.00,
+    'Closed Lost':   0,
   };
   const weighted = active.reduce((s, d) => s + (d.arr || 0) * (stageWeight[d.stage] || 0), 0);
 

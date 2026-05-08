@@ -156,6 +156,15 @@ function similarity(a, b) {
 }
 
 async function detectDuplicates(db, candidate) {
+  // Honor admin-configurable detection settings (enable/disable each match type
+  // + fuzzy threshold). When db is null (unit tests), use full default rules.
+  const settings = db ? await getSettings(db) : {};
+  const dup = settings.duplicateDetection || {};
+  const matchCompany = dup.matchCompany !== false; // default ON
+  const matchEmail = dup.matchEmail !== false;
+  const matchPhone = dup.matchPhone !== false;
+  const fuzzyThreshold = Number(dup.fuzzyThreshold) > 0 ? Number(dup.fuzzyThreshold) : 0.8;
+
   const snap = await db.collection('crm_deals').get();
   const matches = [];
   for (const doc of snap.docs) {
@@ -163,19 +172,21 @@ async function detectDuplicates(db, candidate) {
     const existing = { id: doc.id, ...doc.data() };
     const reasons = [];
 
-    if (candidate.companyName && existing.companyName) {
+    if (matchCompany && candidate.companyName && existing.companyName) {
       const sim = similarity(candidate.companyName, existing.companyName);
-      if (sim >= 0.8) reasons.push(`company name match (${Math.round(sim * 100)}%)`);
+      if (sim >= fuzzyThreshold) reasons.push(`company name match (${Math.round(sim * 100)}%)`);
     }
-    if (candidate.contactEmail && existing.contactEmail &&
+    if (matchEmail && candidate.contactEmail && existing.contactEmail &&
         candidate.contactEmail.toLowerCase() === existing.contactEmail.toLowerCase()) {
       reasons.push('exact email match');
     }
-    const sameCompany = candidate.companyName && existing.companyName &&
-      normalize(candidate.companyName) === normalize(existing.companyName);
-    const samePhone = candidate.contactPhone && existing.contactPhone &&
-      candidate.contactPhone.replace(/\D/g, '') === existing.contactPhone.replace(/\D/g, '');
-    if (sameCompany && samePhone) reasons.push('company + phone match');
+    if (matchPhone) {
+      const sameCompany = candidate.companyName && existing.companyName &&
+        normalize(candidate.companyName) === normalize(existing.companyName);
+      const samePhone = candidate.contactPhone && existing.contactPhone &&
+        candidate.contactPhone.replace(/\D/g, '') === existing.contactPhone.replace(/\D/g, '');
+      if (sameCompany && samePhone) reasons.push('company + phone match');
+    }
 
     if (reasons.length) matches.push({ existing, reasons });
   }
