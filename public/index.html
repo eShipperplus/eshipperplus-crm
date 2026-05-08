@@ -1272,34 +1272,13 @@ textarea.fi{resize:vertical;min-height:68px}
 
     <!-- ═══ NOTIFICATION SETTINGS ═══ -->
     <div class="screen" id="s-notif-settings">
-      <!-- DUPLICATE REVIEW QUEUE (Admin only) -->
-      <div class="card" style="margin-bottom:16px;border:1.5px solid var(--danger)">
-        <div class="ch" style="background:#fdeaea"><span class="ct" style="color:var(--danger)">⚠️ Duplicate Review Queue</span><span class="cs" style="color:#993030">Admin only — 1 pending</span></div>
-        <div class="cb">
-          <div style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-              <div style="padding:12px 14px;border-right:1px solid var(--border)">
-                <div style="font-size:10px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">New Submission</div>
-                <div style="font-size:12px;font-weight:600">Arctic Cold Storage Inc.</div>
-                <div style="font-size:11px;color:var(--text3)">mike.t@arcticcold.ca · Partner Portal</div>
-                <div style="font-size:11px;color:var(--text2);margin-top:4px">Warehousing + Fulfillment · $42,000/mo</div>
-                <div style="margin-top:6px"><span class="pill p-new">New</span></div>
-              </div>
-              <div style="padding:12px 14px">
-                <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Existing Deal</div>
-                <div style="font-size:12px;font-weight:600">Arctic Cold Storage</div>
-                <div style="font-size:11px;color:var(--text3)">mike.tremblay@arcticcold.ca · Manual Entry</div>
-                <div style="font-size:11px;color:var(--text2);margin-top:4px">Warehousing · $28,000/mo</div>
-                <div style="margin-top:6px"><span class="pill p-qual">Qualified</span> <span style="font-size:10.5px;color:var(--text3)">Sara K.</span></div>
-              </div>
-            </div>
-            <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)">Merge — same client</button>
-              <button class="btn btn-sm" style="color:var(--success);border-color:var(--success)">Not a duplicate — proceed separately</button>
-              <button class="btn btn-sm">View both deals</button>
-            </div>
-          </div>
+      <!-- DUPLICATE REVIEW QUEUE (Admin only) — populated by renderDuplicateQueue() -->
+      <div id="dup-queue-card" class="card" style="display:none;margin-bottom:16px;border:1.5px solid var(--danger)">
+        <div class="ch" style="background:#fdeaea">
+          <span class="ct" style="color:var(--danger)">⚠️ Duplicate Review Queue</span>
+          <span class="cs" id="dup-queue-count" style="color:#993030">Admin only</span>
         </div>
+        <div class="cb" id="dup-queue-list" style="display:flex;flex-direction:column;gap:10px"></div>
       </div>
 
       <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">

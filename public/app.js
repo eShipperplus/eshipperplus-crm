@@ -152,6 +152,7 @@ async function bootAppData() {
     renderLeadsTable(deals);
     renderNotifications(notifs);
     renderUsers(users);
+    renderDuplicateQueue();
     updateSidebarBadges(deals, notifs);
     wireDealDetailHandlers();
     wireManualLeadForm();
@@ -537,6 +538,7 @@ async function refreshAll({ silent = false } = {}) {
     renderLeadsTable(deals);
     renderNotifications(notifs);
     renderUsers(users);
+    renderDuplicateQueue();
     updateSidebarBadges(deals, notifs);
   } catch (err) {
     if (!silent) toast('Refresh failed: ' + err.message, 'error');
@@ -1532,6 +1534,80 @@ function wireUserManagement() {
     };
   }
 }
+
+// ─── Duplicate Review Queue (Notification Rules screen, admin-only) ────────
+// Renders every deal where duplicateFlag === true alongside its match(es),
+// with admin actions: Merge, Not a duplicate, View both.
+function renderDuplicateQueue() {
+  if (currentUser?.role !== 'admin') return;
+  const card = document.getElementById('dup-queue-card');
+  const list = document.getElementById('dup-queue-list');
+  const counter = document.getElementById('dup-queue-count');
+  if (!card || !list) return;
+
+  const allDeals = window.__crmState.deals || [];
+  const flagged = allDeals.filter(d => d.duplicateFlag && !d.discarded && !d.mergedInto);
+  if (!flagged.length) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+  if (counter) counter.textContent = `Admin only — ${flagged.length} pending`;
+
+  const dealsById = Object.fromEntries(allDeals.map(d => [d.id, d]));
+
+  list.innerHTML = flagged.map(d => {
+    const matches = (d.duplicateMatches || []);
+    const matchCards = matches.map(m => {
+      const ex = dealsById[m.matchDealId];
+      if (!ex) return `<div style="padding:12px 14px;color:var(--text3);font-size:11.5px">Match ID ${esc(m.matchDealId)} (no longer exists)</div>`;
+      return `
+        <div style="padding:12px 14px">
+          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Existing Deal</div>
+          <div style="font-size:12px;font-weight:600">${esc(ex.companyName)}</div>
+          <div style="font-size:11px;color:var(--text3)">${esc(ex.contactEmail || '—')} · ${esc(ex.source || '—')}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${fmtMonthly(ex.monthlyRevenue || 0)}</div>
+          <div style="margin-top:6px;font-size:10.5px;color:var(--text3)">${esc(ex.stage)} · ${esc(ex.ownerName || 'Unassigned')}</div>
+          <div style="margin-top:6px;font-size:10px;color:var(--danger)">Match: ${esc(m.reasons.join(', '))}</div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:12px 14px;border-right:1px solid var(--border);background:#fffbfb">
+            <div style="font-size:10px;font-weight:600;color:var(--danger);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">New Submission</div>
+            <div style="font-size:12px;font-weight:600">${esc(d.companyName)}</div>
+            <div style="font-size:11px;color:var(--text3)">${esc(d.contactEmail || '—')} · ${esc(d.source || '—')}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px">${fmtMonthly(d.monthlyRevenue || 0)}</div>
+            <div style="margin-top:6px;font-size:10.5px;color:var(--text3)">${esc(d.stage)} · ${esc(d.ownerName || 'Unassigned')}</div>
+          </div>
+          ${matchCards}
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" style="color:var(--success);border-color:var(--success)" onclick="window.dupDecision('${esc(d.id)}','not_duplicate')">✓ Not a duplicate — proceed separately</button>
+          ${matches.length === 1 ? `<button class="btn btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="window.dupDecision('${esc(d.id)}','merge','${esc(matches[0].matchDealId)}')">Merge — discard the new submission</button>` : ''}
+          <button class="btn btn-sm" onclick="window.openDeal('${esc(d.id)}')">View new submission</button>
+          ${matches[0]?.matchDealId ? `<button class="btn btn-sm" onclick="window.openDeal('${esc(matches[0].matchDealId)}')">View existing deal</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+window.dupDecision = async (dealId, action, mergeTargetId) => {
+  const verb = action === 'merge' ? 'merge into the existing deal (this will hide the new submission)' :
+               action === 'not_duplicate' ? 'mark as NOT a duplicate' : 'discard';
+  if (!confirm(`Confirm: ${verb}?`)) return;
+  try {
+    await api(`/api/deals/${dealId}/duplicate-decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action, mergeTargetId }),
+    });
+    toast(action === 'merge' ? 'Merged' : action === 'not_duplicate' ? 'Marked not a duplicate' : 'Discarded', 'ok');
+    await refreshAll();
+    renderDuplicateQueue();
+  } catch (err) { toast(err.message, 'error'); }
+};
 
 // ─── Settings page — all the save buttons ──────────────────────────────────
 function wireSettingsSaveButtons() {
