@@ -50,15 +50,36 @@ async function isRuleEnabled(db, ruleId) {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Sum of monthly recurring + volume-based services. One-time charges don't
+// recur, so they're excluded from monthly + ARR. One-time services have their
+// own total accessible via oneTimeTotal(). (Bug 4.J)
 function monthlyRevenue(deal) {
-  return (deal.services || []).reduce((s, svc) => s + (Number(svc.monthlyRevenue) || 0), 0);
+  return (deal.services || [])
+    .filter(svc => (svc.revenueModel || 'monthly') !== 'one_time')
+    .reduce((s, svc) => s + (Number(svc.monthlyRevenue) || 0), 0);
 }
 
-// R-02 — Tier classification from monthly revenue
-function tierFromMonthly(monthly) {
-  if (monthly >= 25000) return 4;
-  if (monthly >= 10000) return 3;
-  if (monthly >= 5000)  return 2;
+function oneTimeTotal(deal) {
+  return (deal.services || [])
+    .filter(svc => svc.revenueModel === 'one_time')
+    .reduce((s, svc) => s + (Number(svc.monthlyRevenue) || 0), 0);
+}
+
+function arr(deal) {
+  return monthlyRevenue(deal) * 12;
+}
+
+// R-02 — Tier classification from monthly revenue.
+// Default thresholds per spec §9; overridable via crm_config/notification_rules.tierThresholds (4.2b).
+const DEFAULT_TIER_THRESHOLDS = { tier2: 5000, tier3: 10000, tier4: 25000 };
+
+function tierFromMonthly(monthly, thresholds = DEFAULT_TIER_THRESHOLDS) {
+  const t2 = thresholds.tier2 ?? DEFAULT_TIER_THRESHOLDS.tier2;
+  const t3 = thresholds.tier3 ?? DEFAULT_TIER_THRESHOLDS.tier3;
+  const t4 = thresholds.tier4 ?? DEFAULT_TIER_THRESHOLDS.tier4;
+  if (monthly >= t4) return 4;
+  if (monthly >= t3) return 3;
+  if (monthly >= t2) return 2;
   return 1;
 }
 
@@ -160,10 +181,16 @@ async function onLeadSubmit(db, dealId) {
   if (!snap.exists) return;
   const deal = { id: dealId, ...snap.data() };
 
-  // R-02 — classify tier
+  // R-02 — classify tier with configurable thresholds (excludes one-time per 4.J)
+  const settings = await getSettings(db);
   const monthly = monthlyRevenue(deal);
-  const tier = tierFromMonthly(monthly);
-  await ref.update({ tier, monthlyRevenue: monthly, arr: monthly * 12 });
+  const tier = tierFromMonthly(monthly, settings.tierThresholds);
+  await ref.update({
+    tier,
+    monthlyRevenue: monthly,
+    arr: monthly * 12,
+    oneTimeTotal: oneTimeTotal(deal),
+  });
   deal.tier = tier;
 
   // R-05 — duplicate detection
@@ -585,6 +612,8 @@ module.exports = {
   STAGES,
   tierFromMonthly,
   monthlyRevenue,
+  oneTimeTotal,
+  arr,
   detectDuplicates,
   onLeadSubmit,
   onStageChange,

@@ -10,7 +10,7 @@
 const rules = require('../rules/engine');
 
 describe('tierFromMonthly', () => {
-  test('classifies tier from monthly revenue per spec §9', () => {
+  test('classifies tier from monthly revenue per spec §9 (default thresholds)', () => {
     expect(rules.tierFromMonthly(0)).toBe(1);
     expect(rules.tierFromMonthly(4999)).toBe(1);
     expect(rules.tierFromMonthly(5000)).toBe(2);
@@ -26,22 +26,58 @@ describe('tierFromMonthly', () => {
     expect(rules.tierFromMonthly(10000)).toBe(3); // not Tier 2
     expect(rules.tierFromMonthly(25000)).toBe(4); // not Tier 3
   });
+
+  test('honors custom thresholds (4.2b)', () => {
+    const custom = { tier2: 1000, tier3: 5000, tier4: 50000 };
+    expect(rules.tierFromMonthly(500, custom)).toBe(1);
+    expect(rules.tierFromMonthly(1000, custom)).toBe(2);
+    expect(rules.tierFromMonthly(4999, custom)).toBe(2);
+    expect(rules.tierFromMonthly(5000, custom)).toBe(3);
+    expect(rules.tierFromMonthly(50000, custom)).toBe(4);
+  });
+
+  test('falls back to defaults when partial thresholds passed', () => {
+    expect(rules.tierFromMonthly(7500, { tier2: 1000 })).toBe(2); // 1000 < 7500 < default 10000
+  });
 });
 
-describe('monthlyRevenue', () => {
-  test('sums all service line monthly revenues', () => {
+describe('monthlyRevenue (4.J — excludes one-time)', () => {
+  test('sums monthly recurring + volume-based services', () => {
     const deal = {
       services: [
-        { name: 'Warehousing', monthlyRevenue: 20000 },
-        { name: 'Freight', monthlyRevenue: 5000 },
+        { name: 'Warehousing', monthlyRevenue: 20000, revenueModel: 'monthly' },
+        { name: 'Cross-Dock',  monthlyRevenue: 5000,  revenueModel: 'volume_based' },
       ],
     };
     expect(rules.monthlyRevenue(deal)).toBe(25000);
   });
 
+  test('EXCLUDES one-time services from monthly total (4.J)', () => {
+    const deal = {
+      services: [
+        { name: 'Warehousing', monthlyRevenue: 20000, revenueModel: 'monthly' },
+        { name: 'Freight',     monthlyRevenue: 8000,  revenueModel: 'one_time' },
+      ],
+    };
+    expect(rules.monthlyRevenue(deal)).toBe(20000);
+    expect(rules.oneTimeTotal(deal)).toBe(8000);
+    expect(rules.arr(deal)).toBe(240000); // 20K × 12, NOT 28K × 12
+  });
+
+  test('defaults missing revenueModel to monthly (back-compat)', () => {
+    const deal = {
+      services: [
+        { name: 'Warehousing', monthlyRevenue: 20000 }, // no revenueModel
+      ],
+    };
+    expect(rules.monthlyRevenue(deal)).toBe(20000);
+  });
+
   test('treats missing services as 0', () => {
     expect(rules.monthlyRevenue({})).toBe(0);
     expect(rules.monthlyRevenue({ services: [] })).toBe(0);
+    expect(rules.oneTimeTotal({})).toBe(0);
+    expect(rules.arr({})).toBe(0);
   });
 
   test('coerces string revenues to numbers, ignores invalid', () => {

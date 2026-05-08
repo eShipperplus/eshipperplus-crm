@@ -268,12 +268,17 @@ app.patch('/api/deals/:id', requireAuth, requireRole('admin', 'rep'), async (req
   updates.updatedAt = Timestamp.now();
   updates.lastActivityAt = Timestamp.now();
 
-  // Recalculate tier if services changed (R-02)
+  // Recalculate tier + ARR if services changed (R-02). ARR excludes one-time
+  // services (4.J). Tier thresholds come from settings (4.2b).
   if (req.body.services) {
-    const monthly = rules.monthlyRevenue({ services: req.body.services });
-    updates.tier = rules.tierFromMonthly(monthly);
+    const sanitized = updates.services || [];
+    const monthly = rules.monthlyRevenue({ services: sanitized });
+    const cfgSnap = await db.collection('crm_config').doc('notification_rules').get();
+    const thresholds = cfgSnap.exists ? cfgSnap.data().tierThresholds : undefined;
+    updates.tier = rules.tierFromMonthly(monthly, thresholds);
     updates.monthlyRevenue = monthly;
     updates.arr = monthly * 12;
+    updates.oneTimeTotal = rules.oneTimeTotal({ services: sanitized });
   }
 
   await ref.update(updates);
@@ -680,13 +685,17 @@ function sanitizeDealInput(body, { partial = false } = {}) {
   if (!partial) {
     if (!out.companyName) return null;
   }
-  // Normalise services: array of { name, monthlyRevenue }
+  // Normalise services: array of { name, monthlyRevenue, revenueModel }
+  // revenueModel: 'monthly' (default), 'one_time', 'volume_based'.
+  // One-time is excluded from ARR computation downstream (4.J).
   if (out.services && Array.isArray(out.services)) {
+    const validModels = ['monthly', 'one_time', 'volume_based'];
     out.services = out.services
       .filter(s => s && s.name)
       .map(s => ({
         name: String(s.name).slice(0, 60),
         monthlyRevenue: Number(s.monthlyRevenue) || 0,
+        revenueModel: validModels.includes(s.revenueModel) ? s.revenueModel : 'monthly',
       }));
   }
   return out;

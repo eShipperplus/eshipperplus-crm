@@ -176,8 +176,17 @@ function renderDashboard(dash) {
   const screen = document.getElementById('s-dashboard');
   if (!screen) return;
 
-  // Top metric cards
+  // Top metric cards (1.1a/b/c/d/1.D/1.F). Tooltips clarify formulas (1.1d).
   const metrics = screen.querySelectorAll('.mrow .met .mv');
+  const tiles = screen.querySelectorAll('.mrow .met');
+  const tooltips = [
+    'Deals not in Closed Won / Closed Lost / Onboarding.',
+    'Sum of ARR across all active deals.',
+    'Sum of (deal ARR × stage probability) across active deals. Stage probabilities are configurable in Settings.',
+    'Closed Won ÷ (Closed Won + Closed Lost), all-time.',
+    'Pipeline Value ÷ Active Deals. Different from "average Closed Won deal size" — confirm with finance which definition matters most.',
+  ];
+  tiles.forEach((tile, i) => { if (tooltips[i]) tile.title = tooltips[i]; });
   if (metrics.length >= 5) {
     metrics[0].textContent = dash.activeDeals || 0;
     metrics[1].textContent = fmtCompact(dash.pipelineValue || 0);
@@ -188,8 +197,18 @@ function renderDashboard(dash) {
   // Hide the "↑3 vs last month" sublabels — we don't compute deltas yet
   screen.querySelectorAll('.mrow .met .ms').forEach(el => el.style.display = 'none');
 
-  // Pipeline Funnel — first card, .frow rows
+  // Pipeline Funnel — first card. Bar width = $ value (1.2c).
+  // Tooltips per stage explain what each means (1.G).
   const stages = ['New', 'Qualified', 'Proposal Sent', 'Negotiation', 'Closed Won', 'Contract', 'Onboarding'];
+  const stageTooltips = {
+    'New':           'Just submitted — first contact, not yet qualified.',
+    'Qualified':     'Discovery done, fits our service — ready to pitch.',
+    'Proposal Sent': 'Quote/proposal delivered — awaiting client response.',
+    'Negotiation':   'Discussing terms / pricing.',
+    'Closed Won':    'Verbal/written agreement — contract auto-generated and sent for signature.',
+    'Contract':      'Contract sent to client, awaiting eSignature.',
+    'Onboarding':    'Contract signed — Kim is onboarding the client (T+1 SLA).',
+  };
   const funnelCard = screen.querySelectorAll('.card')[0];
   if (funnelCard && dash.funnel) {
     const max = Math.max(1, ...stages.map(s => dash.funnel[s]?.value || 0));
@@ -198,12 +217,15 @@ function renderDashboard(dash) {
       const count = dash.funnel[stage]?.count || 0;
       const value = dash.funnel[stage]?.value || 0;
       const w = max ? Math.max(2, (value / max) * 100) : 2;
-      return `<div class="frow">
-        <div class="fl">${stage}</div>
+      return `<div class="frow" title="${esc(stageTooltips[stage])}">
+        <div class="fl" style="cursor:help">${stage} <span style="color:var(--text3);font-size:9px">ⓘ</span></div>
         <div class="fbw"><div class="fb" style="width:${w}%;background:${colors[stage]}">${count} deal${count === 1 ? '' : 's'}</div></div>
         <div class="fc">${fmtCompact(value)}</div>
       </div>`;
     }).join('');
+    // Sub-header note about bar width
+    const ch = funnelCard.querySelector('.ch .cs');
+    if (ch) ch.textContent = 'Bar width = $ value';
   }
 
   // Weighted Forecast card (second .card on dashboard)
@@ -223,17 +245,21 @@ function renderDashboard(dash) {
     }).join('');
   }
 
-  // Deals by Owner — third .card
+  // Deals by Owner — third .card. Highlight the logged-in user's own row (1.5a).
   const ownerCard = screen.querySelectorAll('.card')[2];
   if (ownerCard && dash.byOwner) {
     const sorted = [...dash.byOwner].sort((a, b) => b.pipeline - a.pipeline);
+    const myUid = currentUser?.uid;
     ownerCard.querySelector('.cb').innerHTML = `<table class="dt">
       <tr><th>Rep</th><th>Deals</th><th>Pipeline</th></tr>
-      ${sorted.length ? sorted.map(o => `<tr>
-        <td><strong>${esc(o.name)}</strong></td>
-        <td>${o.deals}</td>
-        <td>${fmtCompact(o.pipeline)}</td>
-      </tr>`).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:18px">No deals yet</td></tr>'}
+      ${sorted.length ? sorted.map(o => {
+        const isMe = o.uid === myUid;
+        return `<tr style="${isMe ? 'background:#fef9f0' : ''}">
+          <td><strong>${esc(o.name)}</strong>${isMe ? ' <span style="color:var(--warn);font-size:9.5px;font-weight:600">YOU</span>' : ''}</td>
+          <td>${o.deals}</td>
+          <td>${fmtCompact(o.pipeline)}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:18px">No deals yet</td></tr>'}
     </table>`;
   }
 
@@ -878,18 +904,40 @@ const SERVICE_CATALOG = [
 function renderServiceBreakdown(deal) {
   const tbody = document.getElementById('service-breakdown-tbody');
   if (!tbody) return;
-  // Map existing services on the deal by name → revenue
+  // Map existing services on the deal by name → { rev, model }
   const existing = {};
   (deal.services || []).forEach(s => {
-    existing[s.name] = Number(s.monthlyRevenue) || 0;
+    existing[s.name] = {
+      rev: Number(s.monthlyRevenue) || 0,
+      model: s.revenueModel || 'monthly',
+    };
   });
 
+  // Default revenue model per service. Freight is one-time per shipment.
+  const defaultModel = {
+    'Freight': 'one_time',
+    'Small Parcel Shipping': 'volume_based',
+    'Warehousing & Fulfillment': 'monthly',
+    'Cross-Docking': 'volume_based',
+    'Value Added Services (VAS)': 'monthly',
+  };
+
   tbody.innerHTML = SERVICE_CATALOG.map(name => {
-    const rev = existing[name] || 0;
-    const active = name in existing && rev > 0;
+    const ex = existing[name];
+    const rev = ex?.rev || 0;
+    const model = ex?.model || defaultModel[name] || 'monthly';
+    const active = !!ex && rev > 0;
     return `
       <tr data-svc="${esc(name)}">
         <td>${esc(name)}</td>
+        <td>
+          <select class="fsel service-model-select" ${active ? '' : 'disabled'}
+                  style="width:100%;padding:3px 6px;font-size:11px">
+            <option value="monthly" ${model === 'monthly' ? 'selected' : ''}>Monthly Recurring</option>
+            <option value="one_time" ${model === 'one_time' ? 'selected' : ''}>One-Time</option>
+            <option value="volume_based" ${model === 'volume_based' ? 'selected' : ''}>Volume-Based</option>
+          </select>
+        </td>
         <td>
           <input class="fi service-rev-input" type="number" min="0" step="100"
                  value="${active ? rev : ''}" placeholder="—"
@@ -905,20 +953,23 @@ function renderServiceBreakdown(deal) {
       </tr>`;
   }).join('');
 
-  // Wire toggle + input recalc
+  // Wire toggle + input recalc + model change
   tbody.querySelectorAll('.service-active-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const row = cb.closest('tr');
       const input = row.querySelector('.service-rev-input');
+      const sel = row.querySelector('.service-model-select');
       const label = cb.parentElement.querySelector('span');
       if (cb.checked) {
         input.disabled = false;
+        sel.disabled = false;
         input.style.background = '';
         input.style.color = '';
         label.textContent = 'Active';
         if (!input.value) input.focus();
       } else {
         input.disabled = true;
+        sel.disabled = true;
         input.value = '';
         input.style.background = 'var(--surface)';
         input.style.color = 'var(--text3)';
@@ -930,6 +981,9 @@ function renderServiceBreakdown(deal) {
   tbody.querySelectorAll('.service-rev-input').forEach(input => {
     input.addEventListener('input', recalcServiceTotals);
   });
+  tbody.querySelectorAll('.service-model-select').forEach(sel => {
+    sel.addEventListener('change', recalcServiceTotals);
+  });
 
   recalcServiceTotals();
 }
@@ -937,20 +991,36 @@ function renderServiceBreakdown(deal) {
 function recalcServiceTotals() {
   const tbody = document.getElementById('service-breakdown-tbody');
   if (!tbody) return;
-  let total = 0;
+  let recurring = 0;
+  let oneTime = 0;
   tbody.querySelectorAll('tr').forEach(row => {
     const cb = row.querySelector('.service-active-cb');
     const input = row.querySelector('.service-rev-input');
-    if (cb?.checked) total += Number(input?.value) || 0;
+    const model = row.querySelector('.service-model-select')?.value || 'monthly';
+    const v = Number(input?.value) || 0;
+    if (cb?.checked && v > 0) {
+      if (model === 'one_time') oneTime += v;
+      else recurring += v;
+    }
   });
   const monthlyEl = document.getElementById('service-total-monthly');
   const arrEl = document.getElementById('service-total-arr');
+  const onetimeLine = document.getElementById('service-onetime-line');
+  const onetimeEl = document.getElementById('service-total-onetime');
   if (monthlyEl) {
-    monthlyEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString() + ' / mo';
-    monthlyEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
+    monthlyEl.textContent = recurring === 0 ? '—' : '$' + recurring.toLocaleString() + ' / mo';
+    monthlyEl.style.color = recurring === 0 ? 'var(--text3)' : 'var(--success)';
   }
   if (arrEl) {
-    arrEl.textContent = total === 0 ? '—' : '$' + (total * 12).toLocaleString();
+    arrEl.textContent = recurring === 0 ? '—' : '$' + (recurring * 12).toLocaleString();
+  }
+  if (onetimeLine && onetimeEl) {
+    if (oneTime > 0) {
+      onetimeLine.style.display = 'inline';
+      onetimeEl.textContent = '$' + oneTime.toLocaleString();
+    } else {
+      onetimeLine.style.display = 'none';
+    }
   }
 }
 
@@ -961,9 +1031,14 @@ function gatherCurrentServices() {
   tbody.querySelectorAll('tr').forEach(row => {
     const cb = row.querySelector('.service-active-cb');
     const input = row.querySelector('.service-rev-input');
+    const model = row.querySelector('.service-model-select')?.value || 'monthly';
     const name = row.dataset.svc;
     if (cb?.checked && Number(input?.value) > 0) {
-      services.push({ name, monthlyRevenue: Number(input.value) });
+      services.push({
+        name,
+        monthlyRevenue: Number(input.value),
+        revenueModel: model,
+      });
     }
   });
   return services;
@@ -1336,6 +1411,14 @@ function wireNotificationRulesForm() {
       if (adminField && cfg.inactivityAdminDays) adminField.value = cfg.inactivityAdminDays;
       if (stallField && cfg.inactivityStallDays) stallField.value = cfg.inactivityStallDays;
 
+      // Tier thresholds (4.2b)
+      const t2 = document.getElementById('cfg-tier2');
+      const t3 = document.getElementById('cfg-tier3');
+      const t4 = document.getElementById('cfg-tier4');
+      if (t2 && cfg.tierThresholds?.tier2) t2.value = cfg.tierThresholds.tier2;
+      if (t3 && cfg.tierThresholds?.tier3) t3.value = cfg.tierThresholds.tier3;
+      if (t4 && cfg.tierThresholds?.tier4) t4.value = cfg.tierThresholds.tier4;
+
       // Toggle each rule checkbox from saved enabledRules map
       const enabledRules = cfg.enabledRules || {};
       document.querySelectorAll('[data-rule-toggle]').forEach(cb => {
@@ -1362,9 +1445,17 @@ function wireNotificationRulesForm() {
         if (ruleId) enabledRules[ruleId] = cb.checked;
       });
 
+      const t2 = Number(document.getElementById('cfg-tier2')?.value) || 5000;
+      const t3 = Number(document.getElementById('cfg-tier3')?.value) || 10000;
+      const t4 = Number(document.getElementById('cfg-tier4')?.value) || 25000;
+      // Validate ascending order — Tier 2 < Tier 3 < Tier 4
+      if (!(t2 < t3 && t3 < t4)) {
+        return toast('Tier thresholds must be ascending (Tier 2 < Tier 3 < Tier 4)', 'warn');
+      }
       const payload = {
         inactivityRepDays: Number(repField?.value) || 3,
         inactivityAdminDays: Number(adminField?.value) || 7,
+        tierThresholds: { tier2: t2, tier3: t3, tier4: t4 },
         enabledRules,
       };
       try {
