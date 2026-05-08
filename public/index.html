@@ -931,7 +931,7 @@ textarea.fi{resize:vertical;min-height:68px}
             <div class="fg" style="margin-bottom:16px"><label class="fl2">Notes (optional)</label><textarea class="fi" rows="2" placeholder="Reason for moving stage..."></textarea></div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
               <button class="btn btn-sm" onclick="document.getElementById('advance-modal').style.display='none'">Cancel</button>
-              <button class="btn btn-p btn-sm" onclick="document.getElementById('advance-modal').style.display='none'">Confirm Move</button>
+              <button class="btn btn-p btn-sm" id="advance-confirm-btn">Confirm Move</button>
             </div>
           </div>
         </div>
@@ -962,7 +962,7 @@ textarea.fi{resize:vertical;min-height:68px}
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
               <button class="btn btn-sm" onclick="document.getElementById('lost-modal').style.display='none'">Cancel</button>
-              <button class="btn btn-sm" style="background:var(--danger);color:#fff;border-color:var(--danger)" onclick="document.getElementById('lost-modal').style.display='none'">Confirm Lost</button>
+              <button class="btn btn-sm" id="lost-confirm-btn" style="background:var(--danger);color:#fff;border-color:var(--danger)">Confirm Lost</button>
             </div>
           </div>
         </div>
@@ -981,7 +981,7 @@ textarea.fi{resize:vertical;min-height:68px}
             <div class="fg" style="margin-bottom:16px"><label class="fl2">Reason</label><input class="fi" placeholder="e.g. territory re-alignment..."></div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
               <button class="btn btn-sm" onclick="document.getElementById('rep-modal').style.display='none'">Cancel</button>
-              <button class="btn btn-p btn-sm" onclick="document.getElementById('rep-modal').style.display='none'">Confirm Reassignment</button>
+              <button class="btn btn-p btn-sm" id="rep-confirm-btn">Confirm Reassignment</button>
             </div>
           </div>
         </div>
