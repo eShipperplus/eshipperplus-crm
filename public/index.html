@@ -1113,18 +1113,18 @@ textarea.fi{resize:vertical;min-height:68px}
 
           <div class="pf-sec" style="margin-top:4px">Client Information</div>
           <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Client Company <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Client company name"></div>
+            <div class="fg"><label class="fl2">Client Company <span style="color:var(--danger)">*</span></label><input class="fi" id="pp-company" placeholder="Client company name"></div>
             <div class="fg"><label class="fl2">Client Industry</label>
-              <select class="fsel"><option>— Select —</option><option>Retail</option><option>Food & Beverage</option><option>E-Commerce</option><option>Auto Parts</option><option>Distribution</option><option>Apparel</option><option>Pharmaceutical</option><option>Other</option></select>
+              <select class="fsel" id="pp-industry"><option value="">— Select —</option></select>
             </div>
           </div>
           <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Primary contact full name"></div>
-            <div class="fg"><label class="fl2">Contact Title</label><input class="fi" placeholder="e.g. VP Operations"></div>
+            <div class="fg"><label class="fl2">Contact Name <span style="color:var(--danger)">*</span></label><input class="fi" id="pp-contact-name" placeholder="Primary contact full name"></div>
+            <div class="fg"><label class="fl2">Contact Title</label><input class="fi" id="pp-contact-title" placeholder="e.g. VP Operations"></div>
           </div>
           <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Contact Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@client.com"></div>
-            <div class="fg"><label class="fl2">Contact Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
+            <div class="fg"><label class="fl2">Contact Email <span style="color:var(--danger)">*</span></label><input class="fi" id="pp-contact-email" type="email" placeholder="contact@client.com"></div>
+            <div class="fg"><label class="fl2">Contact Phone</label><input class="fi phone-input" id="pp-contact-phone" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
           </div>
           <div class="fg2" style="margin-bottom:12px">
             <div class="fg"><label class="fl2">Province / Region</label>
@@ -1168,13 +1168,14 @@ textarea.fi{resize:vertical;min-height:68px}
           </div>
           <div class="fg" style="margin-bottom:16px">
             <label class="fl2">Additional Notes</label>
-            <textarea class="fi" rows="3" placeholder="Any context about this client's current shipping situation, pain points, or urgency..."></textarea>
+            <textarea class="fi" id="pp-notes" rows="3" placeholder="Any context about this client's current shipping situation, pain points, or urgency..."></textarea>
           </div>
 
           <div style="background:var(--surface);border-radius:6px;padding:10px 14px;font-size:11px;color:var(--text2);margin-bottom:16px">
             By submitting this form, you agree that eShipper Plus may contact the client directly. Partner attribution is applied for 180 days from submission.
           </div>
-          <button class="btn btn-p" style="width:100%;justify-content:center">Submit Lead</button>
+          <button class="btn btn-p" id="partner-preview-submit" style="width:100%;justify-content:center">Submit Lead</button>
+          <div style="margin-top:8px;font-size:10.5px;color:var(--text3);text-align:center">Preview — submitted leads land in the pipeline same as the public partner page.</div>
         </div>
       </div>
 
@@ -1689,10 +1690,16 @@ function show(id, navEl) {
   const titles = {
     dashboard:'Dashboard', pipeline:'Pipeline', leads:'Leads',
     calculator:'Rate Calculator', notifications:'Notifications',
-    deal:'Deal Detail — Arctic Cold Storage', onboarding:'Onboarding — ProShip Inc.',
+    deal:'Deal Detail', onboarding:'Onboarding',
     partner:'Partner Portal', 'manual-lead':'Manual Lead Entry', users:'User Management', 'notif-settings':'Notification Rules', settings:'Settings'
   };
-  document.getElementById('tb-title').textContent = titles[id] || id;
+  // For deal/onboarding views, app.js may have appended " — {Company Name}";
+  // honor that if a current deal is loaded.
+  let title = titles[id] || id;
+  if ((id === 'deal' || id === 'onboarding') && window.__crmState?.currentDeal?.companyName) {
+    title = `${title} — ${window.__crmState.currentDeal.companyName}`;
+  }
+  document.getElementById('tb-title').textContent = title;
 }
 </script>
 </body>

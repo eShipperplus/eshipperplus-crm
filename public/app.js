@@ -2259,6 +2259,69 @@ function wirePartnerPortalScreen() {
   }
 
   recalc();
+
+  // Populate Client Industry dropdown from reference lists
+  const ind = document.getElementById('pp-industry');
+  if (ind && !ind.dataset.wired) {
+    ind.dataset.wired = '1';
+    const industries = window.__crmState.referenceLists?.industries || DEFAULT_INDUSTRIES;
+    ind.innerHTML = '<option value="">— Select —</option>' +
+      industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+  }
+
+  // Wire the Submit Lead button — POSTs to /public/leads/partner same as the public page
+  const submitBtn = document.getElementById('partner-preview-submit');
+  if (submitBtn && !submitBtn.dataset.wired) {
+    submitBtn.dataset.wired = '1';
+    submitBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const repVal = document.getElementById('partner-rep-select')?.value;
+      if (!repVal) return toast('Pick your rep from the dropdown first', 'warn');
+      let partnerRep;
+      try { partnerRep = JSON.parse(repVal); } catch { return toast('Invalid rep selection', 'error'); }
+
+      const services = [];
+      table.querySelectorAll('tr[data-svc]').forEach(row => {
+        const cb = row.querySelector('.partner-svc-cb');
+        const rev = row.querySelector('.partner-svc-rev');
+        const v = Number(rev?.value) || 0;
+        if (cb?.checked && v > 0) {
+          services.push({ name: row.dataset.svc, monthlyRevenue: v });
+        }
+      });
+
+      const body = {
+        companyName: document.getElementById('pp-company')?.value.trim(),
+        contactName: document.getElementById('pp-contact-name')?.value.trim(),
+        contactEmail: document.getElementById('pp-contact-email')?.value.trim(),
+        contactPhone: document.getElementById('pp-contact-phone')?.value.trim(),
+        industry: document.getElementById('pp-industry')?.value,
+        notes: document.getElementById('pp-notes')?.value.trim(),
+        services,
+        partnerRep,
+      };
+      if (!body.companyName) return toast('Client company is required', 'warn');
+      if (!body.contactEmail) return toast('Contact email is required', 'warn');
+      try {
+        // Use direct fetch (not api()) since /public/* doesn't require auth
+        const r = await fetch('/public/leads/partner', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          throw new Error(j.error || 'Submission failed');
+        }
+        toast('Lead submitted via partner portal', 'ok');
+        // Clear form
+        ['pp-company', 'pp-contact-name', 'pp-contact-title', 'pp-contact-email', 'pp-contact-phone', 'pp-notes']
+          .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        const indEl = document.getElementById('pp-industry'); if (indEl) indEl.value = '';
+        table.querySelectorAll('.partner-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+        await refreshAll();
+      } catch (err) { toast(err.message, 'error'); }
+    });
+  }
 }
 
 // ─── Toast helper ────────────────────────────────────────────────────────────
