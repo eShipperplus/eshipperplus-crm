@@ -162,6 +162,8 @@ async function bootAppData() {
     wireOnboardingChecklist();
     wireTopBarButtons();
     wireDealEditButton();
+    wirePhoneInputs();
+    wirePartnerPortalScreen();
     setupAutoRefresh();
   } catch (err) {
     toast('Failed to load data: ' + err.message, 'error');
@@ -965,15 +967,18 @@ function wireDealDetailHandlers() {
   }
 
   // ── Mark Lost — Confirm button ───────────────────────────────────────────
-  bindOnce('lost-confirm-btn', async () => {
+  bindOnce('lost-confirm-btn', async (event) => {
+    console.log('[mark-lost] confirm clicked');
+    if (event) { event.preventDefault(); event.stopPropagation(); }
     const id = document.getElementById('deal-detail-id')?.value;
     const reasonSel = document.getElementById('lost-reason');
     const dateInput = document.getElementById('lost-reengagement-date');
+    console.log('[mark-lost] state:', { id, reason: reasonSel?.value, date: dateInput?.value });
     if (!id) return toast('No deal selected', 'warn');
     if (!reasonSel?.value) return toast('Pick a loss reason', 'warn');
     if (!dateInput?.value) return toast('Set a re-engagement date', 'warn');
     try {
-      await api(`/api/deals/${id}/stage`, {
+      const res = await api(`/api/deals/${id}/stage`, {
         method: 'POST',
         body: JSON.stringify({
           toStage: 'Closed Lost',
@@ -981,12 +986,16 @@ function wireDealDetailHandlers() {
           reengagementDate: dateInput.value,
         }),
       });
+      console.log('[mark-lost] API response:', res);
       document.getElementById('lost-modal').style.display = 'none';
-      reasonSel.value = ''; dateInput.value = ''; // reset so next lost is clean
+      reasonSel.value = ''; dateInput.value = '';
       toast('Marked as Closed Lost', 'ok');
       await refreshAll();
       openDeal(id);
-    } catch (err) { toast('Mark Lost failed: ' + err.message, 'error'); }
+    } catch (err) {
+      console.error('[mark-lost] failed:', err);
+      toast('Mark Lost failed: ' + err.message, 'error');
+    }
   });
 
   // ── Rep reassignment modal ───────────────────────────────────────────────
@@ -1396,6 +1405,103 @@ function setupAutoRefresh() {
       }
     });
   });
+}
+
+// ─── Phone input validation (max 10 digits, auto-format) ────────────────────
+// Apply to every <input class="phone-input"> globally. As user types:
+//   - non-digit characters (other than space, paren, dash, plus) are stripped
+//   - more than 10 digits is blocked
+//   - on blur, formatted to (XXX) XXX-XXXX
+function wirePhoneInputs() {
+  document.querySelectorAll('.phone-input').forEach(input => {
+    if (input.dataset.phoneWired) return;
+    input.dataset.phoneWired = '1';
+    input.addEventListener('input', () => {
+      const digits = input.value.replace(/\D/g, '').slice(0, 10);
+      // Live progressive formatting as they type
+      let formatted = digits;
+      if (digits.length > 6) formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+      else if (digits.length > 3) formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      else if (digits.length > 0) formatted = `(${digits}`;
+      input.value = formatted;
+    });
+    input.addEventListener('blur', () => {
+      const digits = input.value.replace(/\D/g, '').slice(0, 10);
+      if (!digits) { input.value = ''; return; }
+      input.setCustomValidity('');
+      if (digits.length === 10) {
+        input.value = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+      } else {
+        input.setCustomValidity('Phone number must be exactly 10 digits.');
+      }
+    });
+  });
+}
+
+// ─── Partner Portal mockup screen — wire dynamic services + totals ──────────
+function wirePartnerPortalScreen() {
+  const table = document.getElementById('partner-services-table');
+  if (!table || table.dataset.wired) return;
+  table.dataset.wired = '1';
+
+  const recalc = () => {
+    let total = 0;
+    table.querySelectorAll('tr[data-svc]').forEach(row => {
+      const cb = row.querySelector('.partner-svc-cb');
+      const rev = row.querySelector('.partner-svc-rev');
+      if (cb.checked) total += Number(rev.value) || 0;
+    });
+    const totalEl = document.getElementById('partner-total-monthly');
+    const tierEl = document.getElementById('partner-total-tier');
+    if (totalEl) {
+      totalEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString();
+      totalEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
+    }
+    if (tierEl) {
+      const tier = total >= 25000 ? 4 : total >= 10000 ? 3 : total >= 5000 ? 2 : total > 0 ? 1 : 0;
+      tierEl.textContent = tier ? `→ Tier ${tier}` : '';
+    }
+  };
+
+  table.querySelectorAll('tr[data-svc]').forEach(row => {
+    const cb = row.querySelector('.partner-svc-cb');
+    const rev = row.querySelector('.partner-svc-rev');
+    cb.addEventListener('change', () => {
+      rev.disabled = !cb.checked;
+      if (!cb.checked) rev.value = '';
+      else rev.focus();
+      recalc();
+    });
+    rev.addEventListener('input', recalc);
+  });
+
+  // Populate rep dropdown from the partner directory
+  const repSel = document.getElementById('partner-rep-select');
+  if (repSel) {
+    fetch('/public/partner-reps')
+      .then(r => r.json())
+      .then(entries => {
+        const byCompany = {};
+        for (const e of (entries || [])) {
+          (byCompany[e.company] = byCompany[e.company] || []).push(e.repName);
+        }
+        repSel.innerHTML = '<option value="">— Select your rep —</option>';
+        Object.keys(byCompany).sort().forEach(company => {
+          const og = document.createElement('optgroup');
+          og.label = company;
+          byCompany[company].forEach(rep => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify({ company, repName: rep });
+            opt.textContent = rep;
+            og.appendChild(opt);
+          });
+          repSel.appendChild(og);
+        });
+      })
+      .catch(() => {});
+  }
+
+  recalc();
 }
 
 // ─── Toast helper ────────────────────────────────────────────────────────────

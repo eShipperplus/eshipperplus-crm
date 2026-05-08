@@ -1033,7 +1033,7 @@ textarea.fi{resize:vertical;min-height:68px}
 
             <div class="fg2" style="margin-bottom:12px">
               <div class="fg"><label class="fl2">Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@company.com"></div>
-              <div class="fg"><label class="fl2">Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+              <div class="fg"><label class="fl2">Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
             </div>
 
             <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;margin-bottom:14px">
@@ -1138,15 +1138,12 @@ textarea.fi{resize:vertical;min-height:68px}
           </div>
           <div class="fg2" style="margin-bottom:12px">
             <div class="fg"><label class="fl2">Your Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="you@company.com"></div>
-            <div class="fg"><label class="fl2">Your Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+            <div class="fg"><label class="fl2">Your Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
           </div>
           <div class="fg" style="margin-bottom:16px">
             <label class="fl2">Sales Rep (from your company) <span style="color:var(--danger)">*</span></label>
-            <select class="fsel">
-              <option>— Select your rep —</option>
-              <option>Jordan Smith (Acme Logistics Brokers)</option>
-              <option>Leila Hassan (NorthStar Partners)</option>
-              <option>Mike Torres (Apex Freight Group)</option>
+            <select class="fsel" id="partner-rep-select">
+              <option value="">— Select your rep —</option>
             </select>
             <div style="font-size:10px;color:var(--text3);margin-top:4px">Not listed? Contact your eShipper Plus account manager.</div>
           </div>
@@ -1164,7 +1161,7 @@ textarea.fi{resize:vertical;min-height:68px}
           </div>
           <div class="fg2" style="margin-bottom:12px">
             <div class="fg"><label class="fl2">Contact Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="contact@client.com"></div>
-            <div class="fg"><label class="fl2">Contact Phone</label><input class="fi" placeholder="+1 (000) 000-0000"></div>
+            <div class="fg"><label class="fl2">Contact Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
           </div>
           <div class="fg2" style="margin-bottom:12px">
             <div class="fg"><label class="fl2">Province / Region</label>
@@ -1177,18 +1174,18 @@ textarea.fi{resize:vertical;min-height:68px}
 
           <div class="pf-sec" style="margin-top:4px">Services & Volume</div>
           <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Select all services the client requires and provide an estimated monthly volume/value.</div>
-          <table class="dt" style="width:100%;margin-bottom:14px">
-            <tr><th>Service</th><th>Interested?</th><th>Est. Monthly Revenue</th></tr>
-            <tr><td>Freight</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
-            <tr><td>Small Parcel Shipping</td><td><input type="checkbox" checked></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$12,000"></td></tr>
-            <tr><td>Warehousing & Fulfillment</td><td><input type="checkbox" checked></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px" value="$8,000"></td></tr>
-            <tr><td>Cross-Docking</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
-            <tr><td>Value Added Services (VAS)</td><td><input type="checkbox"></td><td><input class="fi" type="text" placeholder="$0" style="width:110px;padding:4px 8px;font-size:11.5px"></td></tr>
+          <table class="dt" style="width:100%;margin-bottom:14px" id="partner-services-table">
+            <tr><th>Service</th><th style="width:90px">Interested?</th><th>Est. Monthly Revenue</th></tr>
+            <tr data-svc="Freight"><td>Freight</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
+            <tr data-svc="Small Parcel Shipping"><td>Small Parcel Shipping</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
+            <tr data-svc="Warehousing & Fulfillment"><td>Warehousing & Fulfillment</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
+            <tr data-svc="Cross-Docking"><td>Cross-Docking</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
+            <tr data-svc="Value Added Services (VAS)"><td>Value Added Services (VAS)</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
           </table>
           <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px">
             <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
-            <span style="font-size:16px;font-weight:700;color:var(--success)">$20,000</span>
-            <span style="font-size:11px;color:var(--text3)">→ Tier 2</span>
+            <span id="partner-total-monthly" style="font-size:16px;font-weight:700;color:var(--text3)">—</span>
+            <span id="partner-total-tier" style="font-size:11px;color:var(--text3)"></span>
           </div>
 
           <div class="fg2" style="margin-bottom:12px">
