@@ -184,8 +184,31 @@ app.get('/api/me', requireAuth, (req, res) => {
 
 // ─── Users (admin only for writes; all authenticated for read) ──────────────
 app.get('/api/users', requireAuth, async (req, res) => {
-  const snap = await db.collection('crm_users').orderBy('displayName').get();
-  res.json(snap.docs.map(d => d.data()));
+  // Active users from crm_users, plus pending invites that haven't been claimed yet.
+  // Admins need to see both so they know who's pre-authorized but hasn't signed in.
+  const [userSnap, inviteSnap] = await Promise.all([
+    db.collection('crm_users').orderBy('displayName').get(),
+    db.collection('crm_invites').get(),
+  ]);
+  const users = userSnap.docs.map(d => ({ ...d.data(), pending: false }));
+  const invites = inviteSnap.docs.map(d => ({
+    uid: `invite:${d.id}`,
+    email: d.id,
+    displayName: d.data().displayName || d.id,
+    role: d.data().role || 'rep',
+    pending: true,
+    invitedAt: d.data().invitedAt,
+  }));
+  // Avoid duplicates if an invite still exists for an already-active user
+  const activeEmails = new Set(users.map(u => (u.email || '').toLowerCase()));
+  const pending = invites.filter(i => !activeEmails.has(i.email.toLowerCase()));
+  res.json([...users, ...pending]);
+});
+
+// Cancel a pending invite (admin only)
+app.delete('/api/invites/:email', requireAuth, requireRole('admin'), async (req, res) => {
+  await db.collection('crm_invites').doc(req.params.email.toLowerCase()).delete();
+  res.json({ ok: true });
 });
 
 app.post('/api/users/invite', requireAuth, requireRole('admin'), async (req, res) => {

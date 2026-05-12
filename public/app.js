@@ -64,7 +64,13 @@ function showAuthGate(show) {
 
 function setAuthError(msg) {
   const el = document.getElementById('auth-error');
-  if (el) el.textContent = msg || '';
+  const signoutBtn = document.getElementById('auth-signout-btn');
+  if (el) {
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
+  // Show "sign out and try again" only when an actual error is showing.
+  if (signoutBtn) signoutBtn.style.display = msg ? 'inline-block' : 'none';
 }
 
 onAuthStateChanged(fbAuth, async (user) => {
@@ -72,6 +78,7 @@ onAuthStateChanged(fbAuth, async (user) => {
   if (!user) {
     currentUser = null;
     showAuthGate(true);
+    setAuthError(''); // clear any prior error
     return;
   }
   try {
@@ -84,7 +91,22 @@ onAuthStateChanged(fbAuth, async (user) => {
     await bootAppData();
   } catch (err) {
     console.error('[auth] /api/me failed:', err);
-    setAuthError('Sign-in succeeded but backend rejected your token: ' + err.message);
+    // Backend rejected — the error message is human-readable thanks to server.js
+    const msg = err.message.replace(/^\d+\s+[A-Z][a-z]+\s*—\s*/, ''); // strip "403 Forbidden — " prefix
+    setAuthError(msg);
+    showAuthGate(true);
+  }
+});
+
+// Sign-out button on the auth gate (visible when a non-authorized user is blocked)
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('auth-signout-btn');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      await signOut(fbAuth);
+      setAuthError('');
+      location.reload();
+    });
   }
 });
 
@@ -1459,19 +1481,24 @@ function renderUsers(users) {
       const isMe = u.uid === currentUser.uid;
       const initials = (u.displayName || u.email).split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
       const color = pickOwnerColor(u.uid || u.email);
+      const pending = u.pending;
+      const statusCell = pending
+        ? `<span style="font-size:10.5px;background:#fff4e6;color:#7a4a00;padding:2px 7px;border-radius:4px;font-weight:600">⏳ Pending invite</span>`
+        : (u.lastSeen ? relativeTime(u.lastSeen) : '—');
+      const actions = pending
+        ? `<button class="btn btn-sm" style="padding:3px 9px;font-size:10px;background:var(--danger-bg);color:var(--danger);border-color:var(--danger)" onclick="window.cancelInvite('${esc(u.email)}')">Cancel invite</button>`
+        : `<button class="btn btn-sm" style="padding:3px 9px;font-size:10px" onclick="window.editUser('${esc(u.uid)}')">Edit</button>` +
+          (isMe ? '' : `<button class="btn btn-sm" style="padding:3px 9px;font-size:10px;background:var(--danger-bg);color:var(--danger);border-color:var(--danger);margin-left:5px" onclick="window.deleteUser('${esc(u.uid)}','${esc(u.displayName || u.email)}')">Delete</button>`);
       return `
-        <tr data-uid="${esc(u.uid)}">
+        <tr data-uid="${esc(u.uid)}" style="${pending ? 'opacity:.85' : ''}">
           <td><div style="display:flex;align-items:center;gap:8px">
-            <div class="av" style="width:26px;height:26px;font-size:10px;background:${color}">${esc(initials)}</div>
+            <div class="av" style="width:26px;height:26px;font-size:10px;background:${pending ? 'var(--text3)' : color}">${esc(initials)}</div>
             <strong>${esc(u.displayName || u.email)}</strong>${isMe ? ' <span style="color:var(--text3);font-size:10px">(you)</span>' : ''}
           </div></td>
           <td>${esc(u.email)}</td>
           <td><span class="pill" style="background:#f0f0fa;color:${roleColor[u.role] || 'var(--text3)'}">${esc(roleLabel[u.role] || u.role)}</span></td>
-          <td style="font-size:11px;color:var(--text3)">${u.lastSeen ? relativeTime(u.lastSeen) : '—'}</td>
-          <td style="display:flex;gap:5px">
-            <button class="btn btn-sm" style="padding:3px 9px;font-size:10px" onclick="window.editUser('${esc(u.uid)}')">Edit</button>
-            ${isMe ? '' : `<button class="btn btn-sm" style="padding:3px 9px;font-size:10px;background:var(--danger-bg);color:var(--danger);border-color:var(--danger)" onclick="window.deleteUser('${esc(u.uid)}','${esc(u.displayName || u.email)}')">Delete</button>`}
-          </td>
+          <td style="font-size:11px;color:var(--text3)">${statusCell}</td>
+          <td>${actions}</td>
         </tr>`;
     }).join('');
   }
@@ -1494,6 +1521,17 @@ window.deleteUser = async (uid, name) => {
   try {
     await api(`/api/users/${uid}`, { method: 'DELETE' });
     toast(`Deleted ${name}`, 'ok');
+    const users = await api('/api/users');
+    window.__crmState.users = users;
+    renderUsers(users);
+  } catch (err) { toast(err.message, 'error'); }
+};
+
+window.cancelInvite = async (email) => {
+  if (!confirm(`Cancel the pending invite for ${email}? They won't be able to sign in until re-invited.`)) return;
+  try {
+    await api(`/api/invites/${encodeURIComponent(email)}`, { method: 'DELETE' });
+    toast(`Invite cancelled for ${email}`, 'ok');
     const users = await api('/api/users');
     window.__crmState.users = users;
     renderUsers(users);
