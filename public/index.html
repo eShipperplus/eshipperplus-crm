@@ -792,41 +792,39 @@ textarea.fi{resize:vertical;min-height:68px}
         <div>
           <!-- Deal Info -->
           <div class="card" style="margin-bottom:14px">
-            <div class="ch"><span class="ct">Deal Information</span><button class="btn btn-sm" style="padding:2px 9px;font-size:10px">Edit</button></div>
+            <div class="ch">
+              <span class="ct">Deal Information</span>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sm" id="deal-info-cancel-btn" style="padding:2px 9px;font-size:10px;display:none">Cancel</button>
+                <button class="btn btn-p btn-sm" id="deal-info-edit-btn" style="padding:2px 9px;font-size:10px">Edit</button>
+              </div>
+            </div>
             <div class="cb">
-              <div class="drow"><span class="dk">Company</span><span class="dv">Arctic Cold Storage Inc.</span></div>
-              <div class="drow"><span class="dk">Contact</span><span class="dv">Mike Tremblay — VP Ops</span></div>
-              <div class="drow"><span class="dk">Email</span><span class="dv">m.tremblay@arcticcold.ca</span></div>
-              <div class="drow"><span class="dk">Phone</span><span class="dv">+1 (416) 555-0182</span></div>
+              <div class="drow"><span class="dk">Company</span><span class="dv"><input class="fi di-input" id="di-company" disabled style="text-align:right;border:none;background:transparent;padding:0;font-size:12px;width:60%"></span></div>
+              <div class="drow"><span class="dk">Contact</span><span class="dv"><input class="fi di-input" id="di-contact-name" disabled style="text-align:right;border:none;background:transparent;padding:0;font-size:12px;width:60%"></span></div>
+              <div class="drow"><span class="dk">Email</span><span class="dv" id="di-email-cell"><input class="fi di-input" id="di-contact-email" type="email" disabled style="text-align:right;border:none;background:transparent;padding:0;font-size:12px;width:60%"></span></div>
+              <div class="drow"><span class="dk">Phone</span><span class="dv" id="di-phone-cell"><input class="fi di-input phone-input" id="di-contact-phone" type="tel" maxlength="20" disabled style="text-align:right;border:none;background:transparent;padding:0;font-size:12px;width:60%"></span></div>
               <div class="drow">
                 <span class="dk">Industry</span>
                 <span class="dv">
-                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto">
-                    <option selected>Food & Beverage</option>
-                    <option>Retail</option><option>E-Commerce</option><option>Auto Parts</option>
-                    <option>Distribution</option><option>Apparel</option><option>Pharmaceutical</option><option>Other</option>
-                  </select>
+                  <select class="fi di-input" id="di-industry" disabled style="padding:2px 6px;font-size:11.5px;width:auto;border:none;background:transparent"></select>
                 </span>
               </div>
               <div class="drow">
                 <span class="dk">Lead Source</span>
                 <span class="dv">
-                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto">
-                    <option selected>Partner Portal</option>
-                    <option>WordPress</option><option>Manual Entry</option><option>Trade Show</option>
-                    <option>Cold Outreach</option><option>Referral</option><option>LinkedIn</option>
-                  </select>
+                  <select class="fi di-input" id="di-source" disabled style="padding:2px 6px;font-size:11.5px;width:auto;border:none;background:transparent"></select>
                 </span>
               </div>
               <div class="drow">
                 <span class="dk">Owner</span>
                 <span class="dv">
-                  <select class="fi" style="padding:2px 6px;font-size:11.5px;width:auto" id="deal-owner-select"></select>
+                  <select class="fi di-input" style="padding:2px 6px;font-size:11.5px;width:auto;border:none;background:transparent" id="deal-owner-select" disabled></select>
                 </span>
               </div>
               <div class="drow"><span class="dk">Deal Tier</span><span class="dv"><span class="pill p-ob">Tier 4 — $25K+/mo</span></span></div>
-              <div class="drow"><span class="dk">Created</span><span class="dv">April 11, 2026</span></div>
-              <div class="drow"><span class="dk">Last Activity</span><span class="dv">2 hours ago</span></div>
+              <div class="drow"><span class="dk">Created</span><span class="dv">—</span></div>
+              <div class="drow"><span class="dk">Last Activity</span><span class="dv">—</span></div>
             </div>
           </div>
 

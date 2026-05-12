@@ -793,60 +793,47 @@ function renderDealDetail(d, activity) {
   const dupBadge = titleSpan?.parentElement?.querySelector('.dup-badge');
   if (dupBadge) dupBadge.style.display = d.duplicateFlag ? '' : 'none';
 
-  // Info rows — every .drow's .dv must reflect live data
-  const rows = screen.querySelectorAll('.drow');
-  // Map by label text (.dk) so reordering the HTML doesn't break this
+  // Populate Industry + Lead Source dropdowns (from saved reference lists)
+  const industries = window.__crmState.referenceLists?.industries || DEFAULT_INDUSTRIES;
+  const sources = window.__crmState.referenceLists?.sources || DEFAULT_SOURCES;
+  const indSel = document.getElementById('di-industry');
+  if (indSel) {
+    indSel.innerHTML = '<option value="">—</option>' + industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
+    indSel.value = d.industry || '';
+  }
+  const srcSel = document.getElementById('di-source');
+  if (srcSel) {
+    srcSel.innerHTML = '<option value="">—</option>' + sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    srcSel.value = d.source || '';
+  }
+
+  // Populate the input fields with current values (Edit mode toggles disabled state)
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setVal('di-company', d.companyName);
+  setVal('di-contact-name', d.contactName);
+  setVal('di-contact-email', d.contactEmail);
+  setVal('di-contact-phone', fmtPhone(d.contactPhone) !== '—' ? fmtPhone(d.contactPhone) : '');
+  const ownerSel = document.getElementById('deal-owner-select');
+  if (ownerSel) ownerSel.value = d.ownerUid || '';
+
+  // The rest of the rows (Deal Tier, Created, Last Activity) — keep as plain text
+  const rows = screen.querySelectorAll('#deal-content .drow');
   rows.forEach(row => {
     const key = row.querySelector('.dk')?.textContent.trim().toLowerCase();
     const dv = row.querySelector('.dv');
     if (!dv) return;
-    switch (key) {
-      case 'company':       dv.textContent = d.companyName || '—'; break;
-      case 'contact':       dv.textContent = d.contactName || '—'; break;
-      case 'email': {
-        // 4.E — clickable mailto link
-        if (d.contactEmail) {
-          dv.innerHTML = `<a href="mailto:${esc(d.contactEmail)}" style="color:var(--purple);text-decoration:none">${esc(d.contactEmail)}</a>`;
-        } else {
-          dv.textContent = '—';
-        }
-        break;
-      }
-      case 'phone': {
-        // 4.E — clickable tel link
-        const formatted = fmtPhone(d.contactPhone);
-        if (d.contactPhone && formatted !== '—') {
-          const digits = String(d.contactPhone).replace(/\D/g, '');
-          dv.innerHTML = `<a href="tel:+1${esc(digits)}" style="color:var(--purple);text-decoration:none">${esc(formatted)}</a>`;
-        } else {
-          dv.textContent = '—';
-        }
-        break;
-      }
-      case 'industry': {
-        const sel = dv.querySelector('select');
-        if (sel) sel.value = d.industry || '';
-        break;
-      }
-      case 'lead source': {
-        const sel = dv.querySelector('select');
-        if (sel) sel.value = d.source || '';
-        break;
-      }
-      case 'owner': {
-        const sel = dv.querySelector('select');
-        if (sel) sel.value = d.ownerUid || '';
-        break;
-      }
-      case 'deal tier': {
-        const pill = dv.querySelector('.pill');
-        if (pill) pill.textContent = d.tier ? `Tier ${d.tier}${tierLabel(d.tier)}` : '—';
-        break;
-      }
-      case 'created':       dv.textContent = formatDate(d.createdAt); break;
-      case 'last activity': dv.textContent = relativeTime(d.lastActivityAt); break;
+    if (key === 'deal tier') {
+      const pill = dv.querySelector('.pill');
+      if (pill) pill.textContent = d.tier ? `Tier ${d.tier}${tierLabel(d.tier)}` : '—';
+    } else if (key === 'created') {
+      dv.textContent = formatDate(d.createdAt);
+    } else if (key === 'last activity') {
+      dv.textContent = relativeTime(d.lastActivityAt);
     }
   });
+
+  // Make sure Edit mode is reset (in case user navigated mid-edit)
+  setDealInfoEditMode(false);
 
   // Top breadcrumb / title bar reflects this deal (4.1)
   const tbTitle = document.getElementById('tb-title');
@@ -2239,42 +2226,77 @@ function wireTopBarButtons() {
   }
 }
 
-// ─── Deal Detail Edit button ─────────────────────────────────────────────────
+// ─── Deal Information card — Edit / Save / Cancel ──────────────────────────
+// All fields in the card are real inputs (id=di-*) but disabled in view mode.
+// Edit toggles disabled off and switches the button labels. Save PATCHes the
+// deal and switches back to view mode. Cancel re-renders to discard changes.
+function setDealInfoEditMode(editing) {
+  const inputs = document.querySelectorAll('#deal-content .di-input');
+  inputs.forEach(i => {
+    i.disabled = !editing;
+    if (editing) {
+      i.style.background = '#fff';
+      i.style.border = '1px solid var(--border)';
+      i.style.padding = '4px 8px';
+      i.style.borderRadius = '4px';
+    } else {
+      i.style.background = 'transparent';
+      i.style.border = 'none';
+      i.style.padding = '0';
+    }
+  });
+  const editBtn = document.getElementById('deal-info-edit-btn');
+  const cancelBtn = document.getElementById('deal-info-cancel-btn');
+  if (editBtn) editBtn.textContent = editing ? 'Save' : 'Edit';
+  if (cancelBtn) cancelBtn.style.display = editing ? 'inline-block' : 'none';
+}
+
 function wireDealEditButton() {
-  // Each card has its own Edit; the main inline-edit panel is the Deal Information card.
-  // Toggle disabled state on inputs to enter "edit mode"; save persists via /api/deals/:id PATCH.
-  const screen = document.getElementById('s-deal');
-  if (!screen) return;
-  const editBtns = screen.querySelectorAll('.ch .btn-sm');
-  editBtns.forEach(btn => {
-    if (btn.dataset.wired || btn.textContent.trim() !== 'Edit') return;
-    btn.dataset.wired = '1';
-    btn.onclick = async () => {
+  // Edit / Save
+  const editBtn = document.getElementById('deal-info-edit-btn');
+  if (editBtn && !editBtn.dataset.wired) {
+    editBtn.dataset.wired = '1';
+    editBtn.addEventListener('click', async () => {
       const id = document.getElementById('deal-detail-id')?.value;
-      if (!id) return;
-      const card = btn.closest('.card');
-      const inputs = card.querySelectorAll('input.fi, select.fi, textarea.fi, select.fsel');
-      const isEditMode = btn.textContent === 'Save';
-      if (!isEditMode) {
-        inputs.forEach(i => i.disabled = false);
-        btn.textContent = 'Save';
+      if (!id) return toast('No deal selected', 'warn');
+      const isEditing = editBtn.textContent === 'Save';
+      if (!isEditing) {
+        setDealInfoEditMode(true);
+        // Rewire phone formatter on the input now that it's enabled
+        wirePhoneInputs();
         return;
       }
-      // Save mode — gather fields and PATCH
-      const payload = {};
-      inputs.forEach(i => {
-        const label = (i.previousElementSibling?.textContent || '').toLowerCase();
-        if (label.includes('industry')) payload.industry = i.value;
-        else if (label.includes('source') || label.includes('lead source')) payload.source = i.value;
-      });
+      // Save
+      const payload = {
+        companyName:  document.getElementById('di-company')?.value.trim(),
+        contactName:  document.getElementById('di-contact-name')?.value.trim(),
+        contactEmail: document.getElementById('di-contact-email')?.value.trim(),
+        contactPhone: document.getElementById('di-contact-phone')?.value.trim(),
+        industry:     document.getElementById('di-industry')?.value,
+        source:       document.getElementById('di-source')?.value,
+        ownerUid:     document.getElementById('deal-owner-select')?.value || null,
+      };
+      if (!payload.companyName) return toast('Company name is required', 'warn');
       try {
         await api(`/api/deals/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
-        toast('Saved', 'ok');
-        btn.textContent = 'Edit';
-        inputs.forEach(i => i.disabled = true);
-      } catch (err) { toast(err.message, 'error'); }
-    };
-  });
+        toast('Deal information saved', 'ok');
+        setDealInfoEditMode(false);
+        await refreshAll();
+        openDeal(id);
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
+    });
+  }
+
+  // Cancel — revert to view mode + re-render to discard changes
+  const cancelBtn = document.getElementById('deal-info-cancel-btn');
+  if (cancelBtn && !cancelBtn.dataset.wired) {
+    cancelBtn.dataset.wired = '1';
+    cancelBtn.addEventListener('click', () => {
+      const id = document.getElementById('deal-detail-id')?.value;
+      setDealInfoEditMode(false);
+      if (id) openDeal(id);
+    });
+  }
 }
 
 // ─── Auto-refresh ────────────────────────────────────────────────────────────
