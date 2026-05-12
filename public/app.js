@@ -142,9 +142,6 @@ function applyRoleToUI(me) {
     if (!isAdmin) el.style.display = 'none';
   });
 
-  // Internal dev/scope banner — admin-only (1.A, 1.B)
-  const devBanner = document.getElementById('dev-scope-banner');
-  if (devBanner) devBanner.style.display = isAdmin ? 'flex' : 'none';
 }
 
 // Top-right user menu toggle + sign-out
