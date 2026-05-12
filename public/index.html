@@ -281,9 +281,11 @@ textarea.fi{resize:vertical;min-height:68px}
 <!-- ═══ SIDEBAR ═══ -->
 <div id="sb">
   <div id="sb-brand">
-    <!-- White-version logo on dark sidebar: CSS filter inverts the purple to white -->
-    <img id="logo-h" src="/logo.png" alt="eShipper Plus" style="max-width:140px;height:auto;display:block;margin-bottom:4px;filter:brightness(0) invert(1)">
-    <div id="sb-tag">CRM</div>
+    <!-- Logo on a small white card — looks intentional regardless of PNG background -->
+    <div style="background:#fff;border-radius:8px;padding:8px 10px;display:inline-block">
+      <img id="logo-h" src="/logo.png" alt="eShipper Plus" style="height:36px;width:auto;display:block;object-fit:contain">
+    </div>
+    <div id="sb-tag" style="margin-top:6px">CRM</div>
   </div>
 
   <div class="ns">Main</div>
