@@ -223,13 +223,17 @@ const capitalize = s => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 // ─── Boot data load ──────────────────────────────────────────────────────────
 async function bootAppData() {
   try {
-    const [deals, dash, notifs, users] = await Promise.all([
+    const [deals, dash, notifs, users, notifRules] = await Promise.all([
       api('/api/deals'),
       api('/api/dashboard'),
       api('/api/notifications'),
       api('/api/users'),
+      api('/api/settings/notification_rules').catch(() => ({})),
     ]);
-    window.__crmState = { deals, dash, notifs, users };
+    window.__crmState = {
+      deals, dash, notifs, users,
+      tierThresholds: notifRules?.tierThresholds,
+    };
     renderDashboard(dash);
     renderPipeline(deals);
     renderLeadsTable(deals);
@@ -1131,11 +1135,28 @@ function recalcServiceTotals() {
   }
   if (onetimeLine && onetimeEl) {
     if (oneTime > 0) {
-      onetimeLine.style.display = 'inline';
+      onetimeLine.style.display = 'flex';
       onetimeEl.textContent = '$' + oneTime.toLocaleString();
     } else {
       onetimeLine.style.display = 'none';
     }
+  }
+  // Show a live tier preview right next to the monthly total so user sees
+  // tier change as they type — even before clicking Save Services.
+  const cfg = window.__crmState?.tierThresholds;
+  const t2 = cfg?.tier2 ?? 5000;
+  const t3 = cfg?.tier3 ?? 10000;
+  const t4 = cfg?.tier4 ?? 25000;
+  const liveTier = recurring >= t4 ? 4 : recurring >= t3 ? 3 : recurring >= t2 ? 2 : recurring > 0 ? 1 : 0;
+  let preview = document.getElementById('service-live-tier');
+  if (!preview && monthlyEl) {
+    preview = document.createElement('span');
+    preview.id = 'service-live-tier';
+    preview.style.cssText = 'font-size:10px;color:var(--text3);margin-left:8px';
+    monthlyEl.parentElement.querySelector('span').appendChild(preview);
+  }
+  if (preview) {
+    preview.textContent = liveTier ? `→ Tier ${liveTier}` : '';
   }
 }
 
