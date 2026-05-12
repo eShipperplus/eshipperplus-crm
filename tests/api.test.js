@@ -118,14 +118,22 @@ describe('Health & auth', () => {
     expect(res.body.email).toBe('u1@eshipperplus.com');
   });
 
-  test('first-time user with no invite → auto-created as rep', async () => {
+  test('first-time user with NO invite is rejected (no auto-provision)', async () => {
     mockAuth.verifyIdToken.mockResolvedValue({
       uid: 'newbie', email: 'newbie@eshipperplus.com', name: 'Newbie',
     });
     const res = await request(app).get('/api/me').set('Authorization', 'Bearer x');
-    expect(res.status).toBe(200);
-    expect(res.body.role).toBe('rep');
-    expect(mockStore.collections.crm_users.newbie.role).toBe('rep');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/invite/i);
+  });
+
+  test('non-eshipperplus.com domain is rejected', async () => {
+    mockAuth.verifyIdToken.mockResolvedValue({
+      uid: 'outsider', email: 'someone@gmail.com', name: 'Outsider',
+    });
+    const res = await request(app).get('/api/me').set('Authorization', 'Bearer x');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/eshipperplus\.com/);
   });
 
   test('first-time user WITH invite → picks up invited role', async () => {

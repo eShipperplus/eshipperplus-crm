@@ -288,7 +288,7 @@ textarea.fi{resize:vertical;min-height:68px}
   <div class="ni" onclick="show('notifications',this)"><span class="nd"></span>Notifications<span class="nbadge">3</span></div>
 
   <div class="ns">Views</div>
-  <div class="ni" onclick="show('deal',this)"><span class="nd"></span>Deal Detail</div>
+  <!-- Deal Detail is reached by clicking a deal, not from sidebar -->
   <div class="ni" onclick="show('onboarding',this)"><span class="nd"></span>Onboarding</div>
   <div class="ns">Intake</div>
   <div class="ni" onclick="show('partner',this)"><span class="nd"></span>Partner Portal</div>
@@ -310,11 +310,24 @@ textarea.fi{resize:vertical;min-height:68px}
   <div id="tb">
     <div id="tb-l">
       <div id="tb-title">Dashboard</div>
-      <div id="tb-bc">eShipper Plus CRM</div>
     </div>
     <div id="tb-r">
-      <button class="btn btn-sm" onclick="show('leads',document.querySelector('.ni:nth-child(4)'))">+ New Lead</button>
-      <button class="btn btn-p btn-sm" onclick="show('calculator',document.querySelector('.ni:nth-child(7)'))">Rate Calculator</button>
+      <button class="btn btn-sm" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ New Lead</button>
+      <!-- User menu in the top-right (replaces Rate Calculator button) -->
+      <div id="tb-user" style="position:relative;display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .12s" onclick="window.toggleUserMenu&&window.toggleUserMenu()">
+        <div class="av" id="tb-user-avatar" style="width:28px;height:28px;font-size:11px"></div>
+        <div style="line-height:1.1">
+          <div id="tb-user-name" style="font-size:11.5px;font-weight:500;color:var(--text)">—</div>
+          <div id="tb-user-role" style="font-size:9.5px;color:var(--text3)">—</div>
+        </div>
+        <span style="font-size:10px;color:var(--text3)">▾</span>
+        <div id="tb-user-menu" style="display:none;position:absolute;right:0;top:42px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 18px rgba(52,54,138,.12);min-width:180px;z-index:500;overflow:hidden">
+          <div id="tb-user-menu-email" style="padding:8px 12px;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)"></div>
+          <div style="padding:6px 0">
+            <div onclick="event.stopPropagation();window.signOutCurrent&&window.signOutCurrent()" style="padding:8px 12px;font-size:12px;cursor:pointer;color:var(--danger)" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">Sign out</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -854,14 +867,14 @@ textarea.fi{resize:vertical;min-height:68px}
             <div class="ch"><span class="ct">Service Breakdown</span><span class="cs">Toggle Active · enter monthly $</span></div>
             <div class="cb">
               <table class="dt" style="width:100%">
-                <thead><tr><th>Service</th><th style="width:130px">Revenue Model</th><th style="width:120px">$ / period</th><th style="width:80px">Active</th></tr></thead>
+                <thead><tr><th>Service</th><th style="width:180px">Revenue Model</th><th style="width:120px">$ / period</th><th style="width:80px">Active</th></tr></thead>
                 <tbody id="service-breakdown-tbody"></tbody>
               </table>
               <div style="margin-top:10px;padding:10px 12px;background:var(--surface);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
-                <span style="font-size:12px;font-weight:600;color:var(--text)" title="Sum of recurring monthly + volume-based revenues. One-time charges are excluded from this total.">Total Monthly Recurring</span>
+                <span style="font-size:12px;font-weight:600;color:var(--text)" title="Sum of recurring + one-time service revenues entered above.">Total Estimated Monthly Revenue</span>
                 <span id="service-total-monthly" style="font-size:16px;font-weight:700;color:var(--success)">—</span>
               </div>
-              <div style="margin-top:4px;text-align:right;font-size:11px;color:var(--text2)">ARR: <strong id="service-total-arr">—</strong> <span id="service-onetime-line" style="display:none;color:var(--text3)"> · One-time: <strong id="service-total-onetime"></strong></span></div>
+              <div style="margin-top:4px;text-align:right;font-size:11px;color:var(--text2)">ARR (recurring only): <strong id="service-total-arr">—</strong> <span id="service-onetime-line" style="display:none;color:var(--text3)"> · One-time: <strong id="service-total-onetime"></strong></span></div>
               <div style="margin-top:10px;display:flex;justify-content:flex-end;gap:8px">
                 <button class="btn btn-sm" id="service-revert-btn">Revert</button>
                 <button class="btn btn-p btn-sm" id="service-save-btn">Save Services</button>
@@ -1037,16 +1050,14 @@ textarea.fi{resize:vertical;min-height:68px}
             </div>
 
             <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;margin-bottom:14px">
-              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Service Interests & Revenue</div>
-              <table class="dt" style="width:100%;margin-bottom:10px" id="ml-services-table">
-                <thead><tr><th>Service</th><th style="width:90px">Interested?</th><th>Est. Monthly Revenue</th></tr></thead>
-                <tbody id="ml-services-tbody"></tbody>
-              </table>
-              <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px">
-                <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
-                <span id="ml-total-monthly" style="font-size:16px;font-weight:700;color:var(--text3)">—</span>
-                <span id="ml-total-tier" style="font-size:11px;color:var(--text3)"></span>
-              </div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Service Interests & Volume</div>
+              <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Tick services. Add volume + context — rep / admin can fill in $ revenue later on the deal detail page.</div>
+              <div id="ml-services-list" style="display:flex;flex-direction:column;gap:10px"></div>
+            </div>
+
+            <div class="fg" style="margin-bottom:14px">
+              <label class="fl2">Warehouse Location(s) — multi-select</label>
+              <div id="ml-warehouses" data-warehouse-multiselect data-selected="[]" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
             </div>
 
             <div class="fg2" style="margin-bottom:12px">
@@ -1094,21 +1105,13 @@ textarea.fi{resize:vertical;min-height:68px}
         </div>
         <div class="pf-body">
 
-          <div class="pf-sec">Your Information (Partner)</div>
-          <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Partner Company <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Your company name"></div>
-            <div class="fg"><label class="fl2">Your Name <span style="color:var(--danger)">*</span></label><input class="fi" placeholder="Full name"></div>
-          </div>
-          <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Your Email <span style="color:var(--danger)">*</span></label><input class="fi" type="email" placeholder="you@company.com"></div>
-            <div class="fg"><label class="fl2">Your Phone</label><input class="fi phone-input" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
-          </div>
+          <div class="pf-sec">Submitting Sales Rep</div>
           <div class="fg" style="margin-bottom:16px">
-            <label class="fl2">Sales Rep (from your company) <span style="color:var(--danger)">*</span></label>
+            <label class="fl2">Sales rep <span style="color:var(--danger)">*</span></label>
             <select class="fsel" id="partner-rep-select">
               <option value="">— Select your rep —</option>
             </select>
-            <div style="font-size:10px;color:var(--text3);margin-top:4px">Not listed? Contact your eShipper Plus account manager.</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Reps are managed in User Management (admin only). Email + name come from there — notifications go to the rep on submission.</div>
           </div>
 
           <div class="pf-sec" style="margin-top:4px">Client Information</div>
@@ -1126,39 +1129,15 @@ textarea.fi{resize:vertical;min-height:68px}
             <div class="fg"><label class="fl2">Contact Email <span style="color:var(--danger)">*</span></label><input class="fi" id="pp-contact-email" type="email" placeholder="contact@client.com"></div>
             <div class="fg"><label class="fl2">Contact Phone</label><input class="fi phone-input" id="pp-contact-phone" type="tel" maxlength="20" pattern="[\d\s\(\)\+\-]*" placeholder="(000) 000-0000"></div>
           </div>
-          <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Province / Region</label>
-              <select class="fsel"><option>— Select —</option><option>Ontario</option><option>Quebec</option><option>British Columbia</option><option>Alberta</option><option>Other</option></select>
-            </div>
-            <div class="fg"><label class="fl2">Number of Employees</label>
-              <select class="fsel"><option>— Select —</option><option>1–10</option><option>11–50</option><option>51–200</option><option>200+</option></select>
-            </div>
+          <div class="fg" style="margin-bottom:14px">
+            <label class="fl2">Warehouse Location(s) — multi-select</label>
+            <div id="pp-warehouses" data-warehouse-multiselect data-selected="[]" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Locations are admin-configurable in Settings → Reference Lists.</div>
           </div>
 
           <div class="pf-sec" style="margin-top:4px">Services & Volume</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Select all services the client requires and provide an estimated monthly volume/value.</div>
-          <table class="dt" style="width:100%;margin-bottom:14px" id="partner-services-table">
-            <tr><th>Service</th><th style="width:90px">Interested?</th><th>Est. Monthly Revenue</th></tr>
-            <tr data-svc="Freight"><td>Freight</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
-            <tr data-svc="Small Parcel Shipping"><td>Small Parcel Shipping</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
-            <tr data-svc="Warehousing & Fulfillment"><td>Warehousing & Fulfillment</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
-            <tr data-svc="Cross-Docking"><td>Cross-Docking</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
-            <tr data-svc="Value Added Services (VAS)"><td>Value Added Services (VAS)</td><td><input type="checkbox" class="partner-svc-cb"></td><td><input class="fi partner-svc-rev" type="number" min="0" step="100" placeholder="$0" style="width:120px;padding:4px 8px;font-size:11.5px" disabled></td></tr>
-          </table>
-          <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px">
-            <span style="font-size:11.5px;color:var(--text2)">Est. Monthly Total:</span>
-            <span id="partner-total-monthly" style="font-size:16px;font-weight:700;color:var(--text3)">—</span>
-            <span id="partner-total-tier" style="font-size:11px;color:var(--text3)"></span>
-          </div>
-
-          <div class="fg2" style="margin-bottom:12px">
-            <div class="fg"><label class="fl2">Monthly Shipment Volume</label>
-              <select class="fsel"><option>— Select —</option><option>&lt; 100 shipments</option><option>100–500</option><option>500–2,000</option><option>2,000–10,000</option><option>10,000+</option></select>
-            </div>
-            <div class="fg"><label class="fl2">Average Shipment Weight</label>
-              <select class="fsel"><option>— Select —</option><option>&lt; 5 lbs</option><option>5–20 lbs</option><option>20–70 lbs</option><option>70+ lbs (LTL/FTL)</option></select>
-            </div>
-          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Tick the services the client needs. Add an estimated volume (trucks/shipments/pallets — whatever fits) and any context per service.</div>
+          <div id="partner-services-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
 
           <div class="fg" style="margin-bottom:12px">
             <label class="fl2">Meeting Request</label>
@@ -1470,7 +1449,7 @@ textarea.fi{resize:vertical;min-height:68px}
       <div class="card" style="max-width:720px;margin-bottom:14px">
         <div class="ch"><span class="ct">Reference Lists</span><span class="cs">Drives the dropdowns on intake forms</span></div>
         <div class="cb">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
             <div>
               <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Industry</div>
               <div id="industry-list" data-ref-list="industries" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
@@ -1480,6 +1459,11 @@ textarea.fi{resize:vertical;min-height:68px}
               <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Lead Source</div>
               <div id="source-list" data-ref-list="sources" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
               <div style="display:flex;gap:5px"><input class="fi" id="add-source" placeholder="Add source..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" id="add-source-btn">+ Add</button></div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Warehouse Locations</div>
+              <div id="warehouse-list" data-ref-list="warehouses" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
+              <div style="display:flex;gap:5px"><input class="fi" id="add-warehouse" placeholder="Add location..." style="font-size:11px;padding:4px 7px"><button class="btn btn-sm" style="padding:3px 8px;font-size:10px" id="add-warehouse-btn">+ Add</button></div>
             </div>
           </div>
           <div style="margin-top:14px;padding:10px 12px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--text2)">

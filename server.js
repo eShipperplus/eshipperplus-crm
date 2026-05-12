@@ -91,7 +91,15 @@ const publicLimiter = rateLimit({
 app.use('/public/', publicLimiter);
 
 app.use(express.json({ limit: '2mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files: prevent the SPA shell (index.html / app.js) from being cached
+// across deploys. Other assets (fonts, images) keep the default short cache.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (/\.(html|js)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  },
+}));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
@@ -106,23 +114,37 @@ async function requireAuth(req, res, next) {
     req.uid = decoded.uid;
     req.email = decoded.email;
 
+    // Domain gate — only @eshipperplus.com Workspace accounts can sign in
+    const ALLOWED_DOMAIN = 'eshipperplus.com';
+    const emailDomain = (decoded.email || '').toLowerCase().split('@')[1];
+    if (emailDomain !== ALLOWED_DOMAIN) {
+      return res.status(403).json({
+        error: `Access restricted to @${ALLOWED_DOMAIN} accounts. Sign out and try again with your eShipper Plus account.`,
+      });
+    }
+
     const userRef = db.collection('crm_users').doc(decoded.uid);
     const snap = await userRef.get();
     if (!snap.exists) {
-      // Check for an invite that pre-sets role
+      // No auto-provisioning: must have an explicit invite from an admin
       const inviteSnap = await db.collection('crm_invites').doc(decoded.email.toLowerCase()).get();
       const invite = inviteSnap.exists ? inviteSnap.data() : null;
-      const role = invite?.role || 'rep';
+      if (!invite) {
+        return res.status(403).json({
+          error: `Your account isn't authorized for the CRM. Ask an admin (Ahmed or Aamer) to invite ${decoded.email} from User Management.`,
+        });
+      }
+      const role = invite.role || 'rep';
       const userData = {
         uid: decoded.uid,
         email: decoded.email,
-        displayName: invite?.displayName || decoded.name || decoded.email.split('@')[0],
+        displayName: invite.displayName || decoded.name || decoded.email.split('@')[0],
         role,
         createdAt: Timestamp.now(),
         lastSeen: Timestamp.now(),
       };
       await userRef.set(userData);
-      if (invite) inviteSnap.ref.delete().catch(() => {});
+      inviteSnap.ref.delete().catch(() => {});
       auth.setCustomUserClaims(decoded.uid, { role }).catch(() => {});
       req.user = userData;
     } else {
@@ -693,9 +715,16 @@ function sanitizeDealInput(body, { partial = false } = {}) {
   const allowed = [
     'companyName', 'contactName', 'contactEmail', 'contactPhone',
     'industry', 'source', 'ownerUid', 'services', 'notes',
-    'partnerRep', 'website',
+    'partnerRep', 'website', 'warehouseLocations', 'meetingRequested',
   ];
   for (const k of allowed) if (k in body) out[k] = body[k];
+  // Sanitize warehouseLocations to a plain array of strings (max 10 entries)
+  if (out.warehouseLocations) {
+    out.warehouseLocations = Array.isArray(out.warehouseLocations)
+      ? out.warehouseLocations.slice(0, 10).map(s => String(s).slice(0, 60)).filter(Boolean)
+      : [];
+  }
+  if ('meetingRequested' in out) out.meetingRequested = !!out.meetingRequested;
   if (!partial) {
     if (!out.companyName) return null;
   }
@@ -703,14 +732,22 @@ function sanitizeDealInput(body, { partial = false } = {}) {
   // revenueModel: 'monthly' (default), 'one_time', 'volume_based'.
   // One-time is excluded from ARR computation downstream (4.J).
   if (out.services && Array.isArray(out.services)) {
-    const validModels = ['monthly', 'one_time', 'volume_based'];
+    // Volume-Based removed per feedback — only monthly or one_time.
+    // Legacy 'volume_based' values get migrated to 'monthly'.
+    const validModels = ['monthly', 'one_time'];
     out.services = out.services
       .filter(s => s && s.name)
-      .map(s => ({
-        name: String(s.name).slice(0, 60),
-        monthlyRevenue: Number(s.monthlyRevenue) || 0,
-        revenueModel: validModels.includes(s.revenueModel) ? s.revenueModel : 'monthly',
-      }));
+      .map(s => {
+        const incomingModel = s.revenueModel === 'volume_based' ? 'monthly' : s.revenueModel;
+        return {
+          name: String(s.name).slice(0, 60),
+          monthlyRevenue: Number(s.monthlyRevenue) || 0,
+          revenueModel: validModels.includes(incomingModel) ? incomingModel : 'monthly',
+          // Volume / comments fields from intake forms (Partner Portal, Manual Lead Entry)
+          volume: s.volume ? String(s.volume).slice(0, 200) : undefined,
+          comments: s.comments ? String(s.comments).slice(0, 500) : undefined,
+        };
+      });
   }
   return out;
 }

@@ -94,7 +94,8 @@ function attachSignInHandler() {
   btn.addEventListener('click', async () => {
     setAuthError('');
     const provider = new GoogleAuthProvider();
-    // NOTE: hd restriction removed for now — was silently filtering valid sign-ins
+    // Restrict to the eShipper Workspace domain (defense in depth — server enforces too)
+    provider.setCustomParameters({ hd: 'eshipperplus.com' });
     try {
       console.log('[auth] starting popup sign-in');
       const result = await signInWithPopup(fbAuth, provider);
@@ -116,13 +117,24 @@ function attachSignInHandler() {
 
 // ─── UI adaptation by role ───────────────────────────────────────────────────
 function applyRoleToUI(me) {
-  // Update sidebar user card
+  const initials = (me.displayName || me.email).split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  // Update sidebar user card (still present for context)
   const av = document.querySelector('#sb-user .av');
   const un = document.querySelector('#sb-user .un');
   const ur = document.querySelector('#sb-user .ur');
-  if (av) av.textContent = (me.displayName || me.email).split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  if (av) av.textContent = initials;
   if (un) un.textContent = me.displayName;
   if (ur) ur.textContent = capitalize(me.role);
+
+  // Top-right user menu (replaces Rate Calculator button)
+  const tbAv = document.getElementById('tb-user-avatar');
+  const tbName = document.getElementById('tb-user-name');
+  const tbRole = document.getElementById('tb-user-role');
+  const tbEmail = document.getElementById('tb-user-menu-email');
+  if (tbAv) tbAv.textContent = initials;
+  if (tbName) tbName.textContent = me.displayName;
+  if (tbRole) tbRole.textContent = capitalize(me.role);
+  if (tbEmail) tbEmail.textContent = me.email;
 
   // Hide admin-only nav for non-admins
   const isAdmin = me.role === 'admin';
@@ -134,6 +146,26 @@ function applyRoleToUI(me) {
   const devBanner = document.getElementById('dev-scope-banner');
   if (devBanner) devBanner.style.display = isAdmin ? 'flex' : 'none';
 }
+
+// Top-right user menu toggle + sign-out
+window.toggleUserMenu = () => {
+  const menu = document.getElementById('tb-user-menu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+};
+window.signOutCurrent = async () => {
+  if (!confirm('Sign out?')) return;
+  await signOut(fbAuth);
+  location.reload();
+};
+// Close menu on outside click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('tb-user-menu');
+  const trigger = document.getElementById('tb-user');
+  if (menu && trigger && !trigger.contains(e.target) && menu.style.display === 'block') {
+    menu.style.display = 'none';
+  }
+});
 
 const capitalize = s => (s || '').charAt(0).toUpperCase() + (s || '').slice(1);
 
@@ -220,10 +252,17 @@ function renderDashboard(dash) {
     funnelCard.querySelector('.cb').innerHTML = stages.map(stage => {
       const count = dash.funnel[stage]?.count || 0;
       const value = dash.funnel[stage]?.value || 0;
-      const w = max ? Math.max(2, (value / max) * 100) : 2;
+      // Bar width caps at 100% and floors at enough room for the count label;
+      // when value=0, render the count to the right of an empty bar so the
+      // text isn't squished inside a 2px sliver.
+      const w = max && value > 0 ? Math.max(20, (value / max) * 100) : 0;
+      const label = `${count} deal${count === 1 ? '' : 's'}`;
+      const bar = value > 0
+        ? `<div class="fb" style="width:${w}%;background:${colors[stage]}">${label}</div>`
+        : `<div class="fb" style="width:0;background:transparent"></div><div style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:10.5px;color:var(--text3)">${label}</div>`;
       return `<div class="frow" title="${esc(stageTooltips[stage])}">
         <div class="fl" style="cursor:help">${stage} <span style="color:var(--text3);font-size:9px">ⓘ</span></div>
-        <div class="fbw"><div class="fb" style="width:${w}%;background:${colors[stage]}">${count} deal${count === 1 ? '' : 's'}</div></div>
+        <div class="fbw" style="position:relative">${bar}</div>
         <div class="fc">${fmtCompact(value)}</div>
       </div>`;
     }).join('');
@@ -919,28 +958,30 @@ function renderServiceBreakdown(deal) {
   });
 
   // Default revenue model per service. Freight is one-time per shipment.
+  // Volume-Based was removed per feedback — services are either Monthly Recurring or One-Time.
   const defaultModel = {
     'Freight': 'one_time',
-    'Small Parcel Shipping': 'volume_based',
+    'Small Parcel Shipping': 'monthly',
     'Warehousing & Fulfillment': 'monthly',
-    'Cross-Docking': 'volume_based',
+    'Cross-Docking': 'one_time',
     'Value Added Services (VAS)': 'monthly',
   };
 
   tbody.innerHTML = SERVICE_CATALOG.map(name => {
     const ex = existing[name];
     const rev = ex?.rev || 0;
-    const model = ex?.model || defaultModel[name] || 'monthly';
+    // Migrate any legacy 'volume_based' values to 'monthly' on the fly
+    let model = ex?.model || defaultModel[name] || 'monthly';
+    if (model === 'volume_based') model = 'monthly';
     const active = !!ex && rev > 0;
     return `
       <tr data-svc="${esc(name)}">
         <td>${esc(name)}</td>
         <td>
           <select class="fsel service-model-select" ${active ? '' : 'disabled'}
-                  style="width:100%;padding:3px 6px;font-size:11px">
+                  style="width:100%;padding:4px 24px 4px 8px;font-size:11.5px">
             <option value="monthly" ${model === 'monthly' ? 'selected' : ''}>Monthly Recurring</option>
             <option value="one_time" ${model === 'one_time' ? 'selected' : ''}>One-Time</option>
-            <option value="volume_based" ${model === 'volume_based' ? 'selected' : ''}>Volume-Based</option>
           </select>
         </td>
         <td>
@@ -1227,7 +1268,8 @@ function wireDealDetailHandlers() {
 // Default reference lists used until admin overrides come back from
 // /api/settings/reference_lists. These match the canonical Service Catalog.
 const DEFAULT_INDUSTRIES = ['Retail', 'Food & Beverage', 'E-Commerce', 'Auto Parts', 'Distribution', 'Apparel', 'Pharmaceutical', 'CPG', 'B2B', 'Manufacturing', 'Other'];
-const DEFAULT_SOURCES = ['Website', 'Partner Portal', 'Manual Entry', 'Referral', 'Trade Show', 'Cold Outreach', 'LinkedIn', 'Other'];
+const DEFAULT_SOURCES = ['Website', 'Partner Referral', 'Manual Entry', 'Trade Show', 'Cold Outreach', 'LinkedIn', 'Existing Client Referral', 'Other'];
+const DEFAULT_WAREHOUSES = ['Ontario', 'British Columbia', 'Dallas', 'Michigan'];
 
 function wireManualLeadForm() {
   const screen = document.getElementById('s-manual-lead');
@@ -1261,62 +1303,39 @@ function wireManualLeadForm() {
     else if (currentUser?.role === 'rep') ownerSel.value = currentUser.uid; // default to self if rep
   }
 
-  // Render service rows from canonical catalog (4.J revenue model + active checkbox + $ format)
-  const tbody = document.getElementById('ml-services-tbody');
-  if (tbody && !tbody.dataset.wired) {
-    tbody.dataset.wired = '1';
-    tbody.innerHTML = SERVICE_CATALOG.map(name => `
-      <tr data-svc="${esc(name)}">
-        <td>${esc(name)}</td>
-        <td><input type="checkbox" class="ml-svc-cb"></td>
-        <td>
-          <input class="fi ml-svc-rev money-input" type="text" placeholder="$0" disabled
-                 style="width:120px;padding:4px 8px;font-size:11.5px;background:var(--surface);color:var(--text3)">
-        </td>
-      </tr>`).join('');
+  // Service rows: tick + volume + comments (no $ revenue at intake)
+  const svcList = document.getElementById('ml-services-list');
+  if (svcList && !svcList.dataset.wired) {
+    svcList.dataset.wired = '1';
+    svcList.innerHTML = SERVICE_CATALOG.map(name => `
+      <div class="ml-svc-row" data-svc="${esc(name)}" style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--white)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:500">
+          <input type="checkbox" class="ml-svc-cb">
+          <span>${esc(name)}</span>
+        </label>
+        <div class="ml-svc-detail" style="display:none;margin-top:8px;grid-template-columns:200px 1fr;gap:8px;align-items:start">
+          <input class="fi ml-svc-volume" type="text" placeholder="Volume (e.g. 5 trucks/mo)" style="padding:5px 8px;font-size:11.5px">
+          <textarea class="fi ml-svc-comments" rows="1" placeholder="Context — origin/destination, freight type, urgency..." style="padding:5px 8px;font-size:11.5px;resize:vertical"></textarea>
+        </div>
+      </div>`).join('');
 
-    const recalc = () => {
-      let total = 0;
-      tbody.querySelectorAll('tr').forEach(row => {
-        const cb = row.querySelector('.ml-svc-cb');
-        const rev = row.querySelector('.ml-svc-rev');
-        if (cb.checked) total += parseMoney(rev.value);
-      });
-      const totalEl = document.getElementById('ml-total-monthly');
-      const tierEl = document.getElementById('ml-total-tier');
-      if (totalEl) {
-        totalEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString();
-        totalEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
-      }
-      if (tierEl) {
-        const tier = total >= 25000 ? 4 : total >= 10000 ? 3 : total >= 5000 ? 2 : total > 0 ? 1 : 0;
-        tierEl.textContent = tier ? `→ Tier ${tier}` : '';
-      }
-    };
-
-    tbody.querySelectorAll('.ml-svc-cb').forEach(cb => {
+    svcList.querySelectorAll('.ml-svc-row').forEach(row => {
+      const cb = row.querySelector('.ml-svc-cb');
+      const detail = row.querySelector('.ml-svc-detail');
       cb.addEventListener('change', () => {
-        const row = cb.closest('tr');
-        const rev = row.querySelector('.ml-svc-rev');
-        if (cb.checked) {
-          rev.disabled = false;
-          rev.style.background = '';
-          rev.style.color = '';
-          rev.focus();
-        } else {
-          rev.disabled = true;
-          rev.value = ''; // uncheck → zero (per user request)
-          rev.style.background = 'var(--surface)';
-          rev.style.color = 'var(--text3)';
+        detail.style.display = cb.checked ? 'grid' : 'none';
+        row.style.borderColor = cb.checked ? 'var(--purple)' : 'var(--border)';
+        if (cb.checked) row.querySelector('.ml-svc-volume')?.focus();
+        else {
+          row.querySelector('.ml-svc-volume').value = '';
+          row.querySelector('.ml-svc-comments').value = '';
         }
-        recalc();
       });
     });
-    tbody.querySelectorAll('.ml-svc-rev').forEach(input => {
-      input.addEventListener('input', recalc);
-    });
-    wireMoneyInputs(tbody); // $-prefix auto-format
   }
+
+  // Warehouse selectors
+  populateAllWarehouseSelectors();
 
   // Submit
   const submitBtn = screen.querySelector('.btn-p');
@@ -1324,6 +1343,20 @@ function wireManualLeadForm() {
     submitBtn.dataset.wired = '1';
     submitBtn.addEventListener('click', async (e) => {
       e.preventDefault();
+      const services = [];
+      document.querySelectorAll('#ml-services-list .ml-svc-row').forEach(row => {
+        const cb = row.querySelector('.ml-svc-cb');
+        if (!cb?.checked) return;
+        services.push({
+          name: row.dataset.svc,
+          volume: row.querySelector('.ml-svc-volume')?.value.trim() || '',
+          comments: row.querySelector('.ml-svc-comments')?.value.trim() || '',
+          monthlyRevenue: 0,
+        });
+      });
+      const warehouses = [];
+      document.querySelectorAll('#ml-warehouses .wh-cb:checked').forEach(cb => warehouses.push(cb.value));
+
       const data = {
         companyName: document.getElementById('ml-company').value.trim(),
         contactName: document.getElementById('ml-contact-name').value.trim(),
@@ -1333,29 +1366,19 @@ function wireManualLeadForm() {
         source: document.getElementById('ml-source').value || 'Manual Entry',
         ownerUid: document.getElementById('ml-owner').value || null,
         notes: document.getElementById('ml-notes').value.trim(),
-        services: [],
+        services,
+        warehouseLocations: warehouses,
       };
-      const tbodyEl = document.getElementById('ml-services-tbody');
-      tbodyEl?.querySelectorAll('tr').forEach(row => {
-        const cb = row.querySelector('.ml-svc-cb');
-        const rev = row.querySelector('.ml-svc-rev');
-        const v = parseMoney(rev?.value);
-        if (cb?.checked && v > 0) {
-          data.services.push({ name: row.dataset.svc, monthlyRevenue: v });
-        }
-      });
       if (!data.companyName) return toast('Company name is required', 'warn');
       if (!data.contactEmail) return toast('Email is required', 'warn');
       try {
         const result = await api('/api/deals', { method: 'POST', body: JSON.stringify(data) });
-        toast(`Lead created · Tier ${result.tier || '—'}`, 'ok');
-        // Clear form
+        toast(`Lead created · admin will set $ revenue on the deal detail page`, 'ok');
         ['ml-company', 'ml-contact-name', 'ml-contact-title', 'ml-contact-email', 'ml-contact-phone', 'ml-notes']
           .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('ml-industry').value = '';
-        tbodyEl?.querySelectorAll('.ml-svc-cb').forEach(cb => {
-          if (cb.checked) cb.click(); // toggle off (also disables + clears revenue)
-        });
+        document.querySelectorAll('#ml-services-list .ml-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+        document.querySelectorAll('#ml-warehouses .wh-cb').forEach(cb => { cb.checked = false; });
         await refreshAll();
       } catch (err) { toast(err.message, 'error'); }
     });
@@ -1370,8 +1393,8 @@ function wireManualLeadForm() {
       ['ml-company', 'ml-contact-name', 'ml-contact-title', 'ml-contact-email', 'ml-contact-phone', 'ml-notes']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       const ind = document.getElementById('ml-industry'); if (ind) ind.value = '';
-      const tbodyEl = document.getElementById('ml-services-tbody');
-      tbodyEl?.querySelectorAll('.ml-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+      document.querySelectorAll('#ml-services-list .ml-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+      document.querySelectorAll('#ml-warehouses .wh-cb').forEach(cb => { cb.checked = false; });
     });
   }
 }
@@ -1812,17 +1835,29 @@ async function loadReferenceLists() {
     window.__crmState.referenceLists = {
       industries: Array.isArray(cfg.industries) && cfg.industries.length ? cfg.industries : DEFAULT_INDUSTRIES,
       sources: Array.isArray(cfg.sources) && cfg.sources.length ? cfg.sources : DEFAULT_SOURCES,
+      warehouses: Array.isArray(cfg.warehouses) && cfg.warehouses.length ? cfg.warehouses : DEFAULT_WAREHOUSES,
     };
-    renderRefListEditor();
-    populateAllSourceDropdowns();
-    populateAllIndustryDropdowns();
   } catch (err) {
-    // Fall back to defaults
-    window.__crmState.referenceLists = { industries: DEFAULT_INDUSTRIES, sources: DEFAULT_SOURCES };
-    renderRefListEditor();
-    populateAllSourceDropdowns();
-    populateAllIndustryDropdowns();
+    window.__crmState.referenceLists = {
+      industries: DEFAULT_INDUSTRIES, sources: DEFAULT_SOURCES, warehouses: DEFAULT_WAREHOUSES,
+    };
   }
+  renderRefListEditor();
+  populateAllSourceDropdowns();
+  populateAllIndustryDropdowns();
+  populateAllWarehouseSelectors();
+}
+
+function populateAllWarehouseSelectors() {
+  const warehouses = window.__crmState.referenceLists?.warehouses || DEFAULT_WAREHOUSES;
+  document.querySelectorAll('[data-warehouse-multiselect]').forEach(box => {
+    const selected = new Set(JSON.parse(box.dataset.selected || '[]'));
+    box.innerHTML = warehouses.map(w => `
+      <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 8px;background:var(--surface);border-radius:4px;cursor:pointer">
+        <input type="checkbox" class="wh-cb" value="${esc(w)}" ${selected.has(w) ? 'checked' : ''}>
+        <span>${esc(w)}</span>
+      </label>`).join('');
+  });
 }
 
 function renderRefListEditor() {
@@ -1845,6 +1880,7 @@ window.removeRefItem = async (key, value) => {
   renderRefListEditor();
   populateAllSourceDropdowns();
   populateAllIndustryDropdowns();
+  populateAllWarehouseSelectors();
   try {
     await api('/api/settings/reference_lists', { method: 'PUT', body: JSON.stringify(lists) });
     toast(`Removed "${value}"`, 'ok');
@@ -1855,6 +1891,7 @@ function wireRefListAddButtons() {
   const wires = [
     { btn: 'add-industry-btn', input: 'add-industry', key: 'industries' },
     { btn: 'add-source-btn', input: 'add-source', key: 'sources' },
+    { btn: 'add-warehouse-btn', input: 'add-warehouse', key: 'warehouses' },
   ];
   wires.forEach(({ btn, input, key }) => {
     const b = document.getElementById(btn);
@@ -1875,6 +1912,7 @@ function wireRefListAddButtons() {
       renderRefListEditor();
       populateAllSourceDropdowns();
       populateAllIndustryDropdowns();
+      populateAllWarehouseSelectors();
       try {
         await api('/api/settings/reference_lists', { method: 'PUT', body: JSON.stringify(lists) });
         toast(`Added "${v}"`, 'ok');
@@ -2195,70 +2233,53 @@ function wirePhoneInputs() {
   });
 }
 
-// ─── Partner Portal mockup screen — wire dynamic services + totals ──────────
+// ─── Partner Portal preview screen ──────────────────────────────────────────
+// Reworked per feedback:
+//   - No partner-rep contact fields (rep is a user from CRM User Management)
+//   - Service list captures volume + comments instead of $ revenue
+//   - Warehouse location multi-select
+//   - Auto-tags lead source = "Partner Referral"
+//   - Notifies all admins on submit (already wired via R-03 engine path)
 function wirePartnerPortalScreen() {
-  const table = document.getElementById('partner-services-table');
-  if (!table || table.dataset.wired) return;
-  table.dataset.wired = '1';
+  const list = document.getElementById('partner-services-list');
+  if (!list || list.dataset.wired) return;
+  list.dataset.wired = '1';
 
-  const recalc = () => {
-    let total = 0;
-    table.querySelectorAll('tr[data-svc]').forEach(row => {
-      const cb = row.querySelector('.partner-svc-cb');
-      const rev = row.querySelector('.partner-svc-rev');
-      if (cb.checked) total += Number(rev.value) || 0;
-    });
-    const totalEl = document.getElementById('partner-total-monthly');
-    const tierEl = document.getElementById('partner-total-tier');
-    if (totalEl) {
-      totalEl.textContent = total === 0 ? '—' : '$' + total.toLocaleString();
-      totalEl.style.color = total === 0 ? 'var(--text3)' : 'var(--success)';
-    }
-    if (tierEl) {
-      const tier = total >= 25000 ? 4 : total >= 10000 ? 3 : total >= 5000 ? 2 : total > 0 ? 1 : 0;
-      tierEl.textContent = tier ? `→ Tier ${tier}` : '';
-    }
-  };
+  // Render service rows: checkbox + label + volume text + comments
+  list.innerHTML = SERVICE_CATALOG.map(name => `
+    <div class="partner-svc-row" data-svc="${esc(name)}" style="border:1px solid var(--border);border-radius:6px;padding:10px 12px;background:var(--white)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:500">
+        <input type="checkbox" class="partner-svc-cb">
+        <span>${esc(name)}</span>
+      </label>
+      <div class="partner-svc-detail" style="display:none;margin-top:8px;display:none;grid-template-columns:200px 1fr;gap:8px;align-items:start">
+        <input class="fi partner-svc-volume" type="text" placeholder="Volume (e.g. 5 trucks/mo)" style="padding:5px 8px;font-size:11.5px">
+        <textarea class="fi partner-svc-comments" rows="1" placeholder="Context — origin/destination, freight type, urgency, anything useful..." style="padding:5px 8px;font-size:11.5px;resize:vertical"></textarea>
+      </div>
+    </div>`).join('');
 
-  table.querySelectorAll('tr[data-svc]').forEach(row => {
+  list.querySelectorAll('.partner-svc-row').forEach(row => {
     const cb = row.querySelector('.partner-svc-cb');
-    const rev = row.querySelector('.partner-svc-rev');
+    const detail = row.querySelector('.partner-svc-detail');
+    const focusFirst = () => row.querySelector('.partner-svc-volume')?.focus();
     cb.addEventListener('change', () => {
-      rev.disabled = !cb.checked;
-      if (!cb.checked) rev.value = '';
-      else rev.focus();
-      recalc();
+      detail.style.display = cb.checked ? 'grid' : 'none';
+      row.style.borderColor = cb.checked ? 'var(--purple)' : 'var(--border)';
+      if (cb.checked) focusFirst();
+      else {
+        row.querySelector('.partner-svc-volume').value = '';
+        row.querySelector('.partner-svc-comments').value = '';
+      }
     });
-    rev.addEventListener('input', recalc);
   });
 
-  // Populate rep dropdown from the partner directory
+  // Populate rep dropdown — sales reps from User Management
   const repSel = document.getElementById('partner-rep-select');
   if (repSel) {
-    fetch('/public/partner-reps')
-      .then(r => r.json())
-      .then(entries => {
-        const byCompany = {};
-        for (const e of (entries || [])) {
-          (byCompany[e.company] = byCompany[e.company] || []).push(e.repName);
-        }
-        repSel.innerHTML = '<option value="">— Select your rep —</option>';
-        Object.keys(byCompany).sort().forEach(company => {
-          const og = document.createElement('optgroup');
-          og.label = company;
-          byCompany[company].forEach(rep => {
-            const opt = document.createElement('option');
-            opt.value = JSON.stringify({ company, repName: rep });
-            opt.textContent = rep;
-            og.appendChild(opt);
-          });
-          repSel.appendChild(og);
-        });
-      })
-      .catch(() => {});
+    const repsAndAdmins = (window.__crmState.users || []).filter(u => u.role === 'rep' || u.role === 'admin');
+    repSel.innerHTML = '<option value="">— Select your rep —</option>' +
+      repsAndAdmins.map(u => `<option value="${esc(u.uid)}">${esc(u.displayName)}${u.role === 'admin' ? ' (Admin)' : ''}</option>`).join('');
   }
-
-  recalc();
 
   // Populate Client Industry dropdown from reference lists
   const ind = document.getElementById('pp-industry');
@@ -2269,26 +2290,35 @@ function wirePartnerPortalScreen() {
       industries.map(i => `<option value="${esc(i)}">${esc(i)}</option>`).join('');
   }
 
-  // Wire the Submit Lead button — POSTs to /public/leads/partner same as the public page
+  // Populate warehouse multiselect from reference lists
+  populateAllWarehouseSelectors();
+
+  // Wire the Submit Lead button — POSTs to /api/deals as a logged-in rep
   const submitBtn = document.getElementById('partner-preview-submit');
   if (submitBtn && !submitBtn.dataset.wired) {
     submitBtn.dataset.wired = '1';
     submitBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      const repVal = document.getElementById('partner-rep-select')?.value;
-      if (!repVal) return toast('Pick your rep from the dropdown first', 'warn');
-      let partnerRep;
-      try { partnerRep = JSON.parse(repVal); } catch { return toast('Invalid rep selection', 'error'); }
+      const repUid = document.getElementById('partner-rep-select')?.value;
+      if (!repUid) return toast('Pick the submitting rep', 'warn');
+      const rep = (window.__crmState.users || []).find(u => u.uid === repUid);
 
+      // Gather services: volume + comments (not $ revenue)
       const services = [];
-      table.querySelectorAll('tr[data-svc]').forEach(row => {
+      list.querySelectorAll('.partner-svc-row').forEach(row => {
         const cb = row.querySelector('.partner-svc-cb');
-        const rev = row.querySelector('.partner-svc-rev');
-        const v = Number(rev?.value) || 0;
-        if (cb?.checked && v > 0) {
-          services.push({ name: row.dataset.svc, monthlyRevenue: v });
-        }
+        if (!cb?.checked) return;
+        services.push({
+          name: row.dataset.svc,
+          volume: row.querySelector('.partner-svc-volume')?.value.trim() || '',
+          comments: row.querySelector('.partner-svc-comments')?.value.trim() || '',
+          monthlyRevenue: 0, // unknown at intake; admin fills in later on Deal Detail
+        });
       });
+
+      // Selected warehouses
+      const warehouses = [];
+      document.querySelectorAll('#pp-warehouses .wh-cb:checked').forEach(cb => warehouses.push(cb.value));
 
       const body = {
         companyName: document.getElementById('pp-company')?.value.trim(),
@@ -2298,26 +2328,24 @@ function wirePartnerPortalScreen() {
         industry: document.getElementById('pp-industry')?.value,
         notes: document.getElementById('pp-notes')?.value.trim(),
         services,
-        partnerRep,
+        warehouseLocations: warehouses,
+        source: 'Partner Referral', // auto-tagged per feedback
+        ownerUid: repUid,
+        meetingRequested: document.getElementById('partner-meeting')?.checked === true,
+        partnerRep: rep ? { uid: rep.uid, repName: rep.displayName, email: rep.email } : null,
       };
       if (!body.companyName) return toast('Client company is required', 'warn');
       if (!body.contactEmail) return toast('Contact email is required', 'warn');
       try {
-        // Use direct fetch (not api()) since /public/* doesn't require auth
-        const r = await fetch('/public/leads/partner', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          throw new Error(j.error || 'Submission failed');
-        }
-        toast('Lead submitted via partner portal', 'ok');
+        const result = await api('/api/deals', { method: 'POST', body: JSON.stringify(body) });
+        toast(`Lead submitted · Partner Referral · assigned to ${rep?.displayName || 'rep'}`, 'ok');
         // Clear form
         ['pp-company', 'pp-contact-name', 'pp-contact-title', 'pp-contact-email', 'pp-contact-phone', 'pp-notes']
           .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         const indEl = document.getElementById('pp-industry'); if (indEl) indEl.value = '';
-        table.querySelectorAll('.partner-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+        const meet = document.getElementById('partner-meeting'); if (meet) meet.checked = false;
+        list.querySelectorAll('.partner-svc-cb').forEach(cb => { if (cb.checked) cb.click(); });
+        document.querySelectorAll('#pp-warehouses .wh-cb').forEach(cb => { cb.checked = false; });
         await refreshAll();
       } catch (err) { toast(err.message, 'error'); }
     });
