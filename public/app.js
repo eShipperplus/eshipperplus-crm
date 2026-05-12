@@ -819,20 +819,26 @@ function renderDealDetail(d, activity) {
   }
   // Industry/source/owner are selects; leave them for quick-edit
 
-  // Activity log
-  const activityCard = screen.querySelectorAll('.card')[1];
-  if (activityCard) {
-    const log = activityCard.querySelector('.cb > div');
-    if (log) {
-      log.innerHTML = activity.map(a => `
-        <div style="display:flex;gap:10px;font-size:11px">
-          <div class="av" style="width:22px;height:22px;font-size:9px;background:${pickOwnerColor(a.actorUid || a.kind)};flex-shrink:0">${(a.actorName || '⚙').split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase()}</div>
-          <div>
-            <div style="font-weight:500">${esc(activityTitle(a))}</div>
-            ${a.detail ? `<div style="color:var(--text3);font-size:10px">${esc(a.detail)}</div>` : ''}
-            <div style="font-size:10px;color:var(--text3)">${relativeTime(a.timestamp)}</div>
-          </div>
-        </div>`).join('');
+  // Activity log entries — render into #activity-entries (input is on top via HTML)
+  const log = document.getElementById('activity-entries');
+  if (log) {
+    if (!activity.length) {
+      log.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px 4px">No activity yet. Log the first one above.</div>';
+    } else {
+      log.innerHTML = activity.map(a => {
+        const initials = (a.actorName || '⚙').split(/\s+/).map(p => p[0]).join('').slice(0, 2).toUpperCase();
+        const color = pickOwnerColor(a.actorUid || a.kind);
+        return `
+          <div style="display:flex;gap:10px;font-size:11px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+            <div class="av" style="width:24px;height:24px;font-size:9px;background:${color};flex-shrink:0">${initials}</div>
+            <div style="flex:1">
+              <div style="font-weight:500">${esc(activityTitle(a))}${a.actorName ? ` <span style="font-weight:400;color:var(--text3)">by ${esc(a.actorName)}</span>` : ''}</div>
+              ${a.detail ? `<div style="color:var(--text2);font-size:11px;margin-top:2px;white-space:pre-wrap">${esc(a.detail)}</div>` : ''}
+              ${a.outcome ? `<div style="color:var(--text3);font-size:10.5px;margin-top:2px;font-style:italic">→ ${esc(a.outcome)}</div>` : ''}
+              <div style="font-size:10px;color:var(--text3);margin-top:3px">${relativeTime(a.timestamp)}</div>
+            </div>
+          </div>`;
+      }).join('');
     }
   }
   document.getElementById('deal-detail-id')?.remove();
@@ -925,9 +931,9 @@ function renderApprovalBanner(d) {
 
 function activityTitle(a) {
   const titles = {
+    // System events
     stage_change: 'Stage changed',
     edit: 'Deal edited',
-    note: 'Note added',
     rep_reassigned: 'Rep reassigned',
     proposal_approved: 'Proposal approved',
     proposal_rejected: 'Proposal rejected',
@@ -943,6 +949,18 @@ function activityTitle(a) {
     onboarding_update: 'Onboarding checklist updated',
     welcome_sent: 'Welcome email sent',
     partner_attribution: 'Partner attribution logged',
+    // User-logged activity types
+    note: '📝 Note',
+    call_out: '📞 Call made to client',
+    call_in: '📞 Client called in',
+    voicemail: '📵 Voicemail left',
+    email_out: '✉️ Email sent to client',
+    email_in: '📩 Email received from client',
+    meeting: '🤝 Meeting / call',
+    site_visit: '🏢 Site visit',
+    quote_sent: '💵 Quote / proposal sent',
+    follow_up: '⏰ Follow-up scheduled',
+    other: '📌 Activity logged',
   };
   return titles[a.kind] || a.kind;
 }
@@ -1122,10 +1140,13 @@ function wireServiceBreakdownButtons() {
           method: 'PATCH',
           body: JSON.stringify({ services }),
         });
-        toast('Services saved · tier and ARR recalculated', 'ok');
+        // Fetch the saved deal to read the server-side recomputed tier
+        const fresh = await api(`/api/deals/${id}`);
+        const tierMsg = fresh.tier ? `Tier ${fresh.tier}` : 'tier cleared';
+        toast(`Services saved · ${tierMsg} · ARR ${fmtCompact(fresh.arr || 0)}`, 'ok');
         await refreshAll();
         openDeal(id);
-      } catch (err) { toast(err.message, 'error'); }
+      } catch (err) { toast('Save failed: ' + err.message, 'error'); }
     };
   }
   const revertBtn = document.getElementById('service-revert-btn');
@@ -1265,22 +1286,25 @@ function wireDealDetailHandlers() {
   // Always re-populate owner dropdowns from current users list
   populateOwnerDropdowns();
 
-  // Log note
-  const logBtn = document.querySelector('#s-deal .card:nth-of-type(2) .btn-p');
-  if (logBtn && !logBtn.dataset.wired) {
-    logBtn.dataset.wired = '1';
-    logBtn.onclick = async () => {
-      const id = document.getElementById('deal-detail-id')?.value;
-      const input = logBtn.parentElement.querySelector('input');
-      const text = input?.value?.trim();
-      if (!id || !text) return;
-      try {
-        await api(`/api/deals/${id}/notes`, { method: 'POST', body: JSON.stringify({ text }) });
-        input.value = '';
-        openDeal(id);
-      } catch (err) { toast(err.message, 'error'); }
-    };
-  }
+  // Activity Log entry — typed activities (call out, email in, etc.) + outcome
+  bindOnce('activity-log-btn', async () => {
+    const id = document.getElementById('deal-detail-id')?.value;
+    const kind = document.getElementById('activity-type-select')?.value || 'note';
+    const text = document.getElementById('activity-detail')?.value.trim();
+    const outcome = document.getElementById('activity-outcome')?.value.trim();
+    if (!id) return toast('No deal selected', 'warn');
+    if (!text) return toast('Add some detail before logging', 'warn');
+    try {
+      await api(`/api/deals/${id}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ text, kind, outcome }),
+      });
+      document.getElementById('activity-detail').value = '';
+      document.getElementById('activity-outcome').value = '';
+      toast('Activity logged', 'ok');
+      openDeal(id);
+    } catch (err) { toast('Log failed: ' + err.message, 'error'); }
+  });
 }
 
 // ─── Manual lead entry form ─────────────────────────────────────────────────

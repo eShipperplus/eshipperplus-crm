@@ -830,28 +830,37 @@ textarea.fi{resize:vertical;min-height:68px}
             </div>
           </div>
 
-          <!-- Activity / Notes -->
+          <!-- Activity / Notes — input ON TOP, log entries below -->
           <div class="card" style="margin-bottom:14px">
             <div class="ch"><span class="ct">Activity Log</span><span class="cs">Most recent first</span></div>
             <div class="cb">
-              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-                <div style="display:flex;gap:10px;font-size:11px">
-                  <div class="av" style="width:22px;height:22px;font-size:9px;background:#e0832a;flex-shrink:0">SK</div>
-                  <div><div style="font-weight:500">Sara K. logged a call</div><div style="color:var(--text3);font-size:10px">Discovery call completed · Budget $40–45K/mo confirmed</div><div style="font-size:10px;color:var(--text3)">2h ago</div></div>
+              <!-- Log entry input — at TOP per feedback -->
+              <div id="activity-entry-form" style="background:var(--surface);border-radius:6px;padding:10px 12px;margin-bottom:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                  <select class="fsel" id="activity-type-select" style="padding:5px 8px;font-size:11.5px">
+                    <option value="note">📝 Note</option>
+                    <option value="call_out">📞 Call made to client</option>
+                    <option value="call_in">📞 Client called in</option>
+                    <option value="voicemail">📵 Left voicemail</option>
+                    <option value="email_out">✉️ Email sent to client</option>
+                    <option value="email_in">📩 Email received from client</option>
+                    <option value="meeting">🤝 Meeting / call scheduled or held</option>
+                    <option value="site_visit">🏢 Site visit</option>
+                    <option value="quote_sent">💵 Quote / proposal sent</option>
+                    <option value="follow_up">⏰ Follow-up needed</option>
+                    <option value="other">📌 Other</option>
+                  </select>
+                  <input class="fi" id="activity-outcome" placeholder="Outcome / next step (optional)" style="font-size:11.5px;padding:5px 8px">
                 </div>
-                <div style="display:flex;gap:10px;font-size:11px">
-                  <div class="av" style="width:22px;height:22px;font-size:9px;background:var(--purple);flex-shrink:0">⚙</div>
-                  <div><div style="font-weight:500">Deal tier set to Tier 4</div><div style="color:var(--text3);font-size:10px">Auto-classified from $42K/mo service estimate</div><div style="font-size:10px;color:var(--text3)">Apr 11</div></div>
-                </div>
-                <div style="display:flex;gap:10px;font-size:11px">
-                  <div class="av" style="width:22px;height:22px;font-size:9px;background:#e0832a;flex-shrink:0">SK</div>
-                  <div><div style="font-weight:500">Lead received via Partner Portal</div><div style="color:var(--text3);font-size:10px">Jordan Smith (Acme Logistics Brokers)</div><div style="font-size:10px;color:var(--text3)">Apr 11</div></div>
+                <textarea class="fi" id="activity-detail" rows="2" placeholder="Details..." style="width:100%;font-size:11.5px;padding:6px 8px;resize:vertical"></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px">
+                  <span style="font-size:10.5px;color:var(--text3)">Auto-tagged with your name and timestamp.</span>
+                  <button class="btn btn-p btn-sm" id="activity-log-btn">Log activity</button>
                 </div>
               </div>
-              <div style="display:flex;gap:8px">
-                <input class="fi" placeholder="Add a note..." style="flex:1;font-size:11.5px">
-                <button class="btn btn-p btn-sm">Log</button>
-              </div>
+
+              <!-- Live activity entries — rendered by renderDealDetail -->
+              <div id="activity-entries" style="display:flex;flex-direction:column;gap:8px"></div>
             </div>
           </div>
         </div>

@@ -489,19 +489,28 @@ app.post('/api/deals/:id/duplicate-decision', requireAuth, requireRole('admin'),
   res.json({ ok: true });
 });
 
-// Notes — any authenticated user who can edit the deal
+// Activity log — any authenticated user can log activity on any deal.
+// Accepts structured types (call_out / call_in / email_out / etc.) plus optional outcome.
 app.post('/api/deals/:id/notes', requireAuth, async (req, res) => {
-  const { text } = req.body || {};
-  if (!text || !text.trim()) return res.status(400).json({ error: 'Empty note' });
+  const { text, kind, outcome } = req.body || {};
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Detail is required' });
+  const allowedKinds = ['note', 'call_out', 'call_in', 'voicemail', 'email_out', 'email_in',
+    'meeting', 'site_visit', 'quote_sent', 'follow_up', 'other'];
+  const safeKind = allowedKinds.includes(kind) ? kind : 'note';
   const ref = db.collection('crm_deals').doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists) return res.status(404).json({ error: 'Not found' });
 
-  await db.collection('crm_activity').add({
-    dealId: req.params.id, kind: 'note', detail: text.trim(),
-    actorUid: req.uid, actorName: req.user.displayName,
+  const entry = {
+    dealId: req.params.id,
+    kind: safeKind,
+    detail: text.trim(),
+    actorUid: req.uid,
+    actorName: req.user.displayName,
     timestamp: Timestamp.now(),
-  });
+  };
+  if (outcome && outcome.trim()) entry.outcome = outcome.trim().slice(0, 200);
+  await db.collection('crm_activity').add(entry);
   await ref.update({ lastActivityAt: Timestamp.now() });
   res.json({ ok: true });
 });
@@ -762,14 +771,16 @@ function sanitizeDealInput(body, { partial = false } = {}) {
       .filter(s => s && s.name)
       .map(s => {
         const incomingModel = s.revenueModel === 'volume_based' ? 'monthly' : s.revenueModel;
-        return {
+        const svc = {
           name: String(s.name).slice(0, 60),
           monthlyRevenue: Number(s.monthlyRevenue) || 0,
           revenueModel: validModels.includes(incomingModel) ? incomingModel : 'monthly',
-          // Volume / comments fields from intake forms (Partner Portal, Manual Lead Entry)
-          volume: s.volume ? String(s.volume).slice(0, 200) : undefined,
-          comments: s.comments ? String(s.comments).slice(0, 500) : undefined,
         };
+        // Firestore rejects `undefined` values — only include volume/comments
+        // when they actually contain a string (avoids the 503 on save).
+        if (s.volume) svc.volume = String(s.volume).slice(0, 200);
+        if (s.comments) svc.comments = String(s.comments).slice(0, 500);
+        return svc;
       });
   }
   return out;
