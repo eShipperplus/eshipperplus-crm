@@ -110,30 +110,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+let _signInInFlight = false;
+
 function attachSignInHandler() {
   const btn = document.getElementById('auth-signin-btn');
   if (!btn) return;
   btn.addEventListener('click', async () => {
+    // Block double-click and concurrent attempts (auth/cancelled-popup-request)
+    if (_signInInFlight) return;
+    _signInInFlight = true;
+    btn.disabled = true;
+    btn.style.opacity = '.7';
+    btn.style.cursor = 'wait';
     setAuthError('');
+
     const provider = new GoogleAuthProvider();
-    // Restrict to the eShipper Workspace domain (defense in depth — server enforces too)
     provider.setCustomParameters({ hd: 'eshipperplus.com' });
+
     try {
       console.log('[auth] starting popup sign-in');
       const result = await signInWithPopup(fbAuth, provider);
-      console.log('[auth] popup resolved with user:', result?.user?.email);
+      console.log('[auth] popup resolved:', result?.user?.email);
+      // onAuthStateChanged will handle the rest
     } catch (err) {
-      console.error('[auth] popup error:', err);
-      setAuthError(`${err.code || 'error'}: ${err.message}`);
+      console.error('[auth] popup error:', err.code, err.message);
+      // Popups that get blocked / cancelled / closed → fall back to redirect.
+      // Redirect doesn't suffer from popup-blocker issues.
+      const fallbackCodes = ['auth/popup-blocked', 'auth/popup-closed-by-user',
+                              'auth/cancelled-popup-request', 'auth/internal-error'];
+      if (fallbackCodes.includes(err.code)) {
+        try {
+          console.log('[auth] falling back to redirect flow');
+          await signInWithRedirect(fbAuth, provider);
+          return; // page is navigating away; don't reset button
+        } catch (redirectErr) {
+          console.error('[auth] redirect also failed:', redirectErr);
+          setAuthError(`Sign-in failed: ${redirectErr.message}`);
+        }
+      } else {
+        setAuthError(`Sign-in failed: ${err.message}`);
+      }
+    } finally {
+      _signInInFlight = false;
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor = '';
     }
   });
 
-  // Also handle the redirect-flow return trip in case any future call uses redirect
+  // Handle the redirect-flow return trip
   getRedirectResult(fbAuth).then(r => {
-    if (r) console.log('[auth] redirect resolved with user:', r.user?.email);
+    if (r) console.log('[auth] redirect resolved:', r.user?.email);
   }).catch(err => {
     console.error('[auth] redirect error:', err);
-    setAuthError(`${err.code || 'error'}: ${err.message}`);
+    if (err.code !== 'auth/no-auth-event') {
+      setAuthError(`Sign-in failed: ${err.message}`);
+    }
   });
 }
 
