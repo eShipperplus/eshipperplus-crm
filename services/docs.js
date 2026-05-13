@@ -35,7 +35,8 @@ async function generateContract({ deal, folderId }) {
   }
   const { drive, docs } = await getClients();
 
-  // 1) Copy the template into the client's folder
+  // 1) Copy the template into the client's folder.
+  // supportsAllDrives lets the SA touch human-owned / shared folders.
   const copy = await drive.files.copy({
     fileId: TEMPLATE_ID,
     requestBody: {
@@ -43,6 +44,7 @@ async function generateContract({ deal, folderId }) {
       parents: folderId ? [folderId] : undefined,
     },
     fields: 'id,name,webViewLink',
+    supportsAllDrives: true,
   });
   const docId = copy.data.id;
 
@@ -71,7 +73,7 @@ async function generateContract({ deal, folderId }) {
 async function exportPdf({ docId }) {
   const { drive } = await getClients();
   const res = await drive.files.export(
-    { fileId: docId, mimeType: 'application/pdf' },
+    { fileId: docId, mimeType: 'application/pdf', supportsAllDrives: true },
     { responseType: 'arraybuffer' }
   );
   return Buffer.from(res.data);
