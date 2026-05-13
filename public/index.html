@@ -546,7 +546,10 @@ textarea.fi{resize:vertical;min-height:68px}
           <button class="btn btn-sm" onclick="clearLeadFilters()" style="font-size:10.5px">✕ Clear</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <span id="lead-count" style="font-size:11px;color:var(--text3)">7 leads</span>
+          <span id="lead-count" style="font-size:11px;color:var(--text3)">— leads</span>
+          <button class="btn btn-sm" id="leads-import-template-btn" title="Download a blank CSV with the right column headers">⬇ Template</button>
+          <input type="file" id="leads-import-file" accept=".csv,.xlsx,.xls" style="display:none">
+          <button class="btn btn-sm" id="leads-import-csv-btn" title="Bulk import leads from CSV / Excel">⬆ Import CSV</button>
           <button class="btn btn-sm" id="leads-export-csv-btn">Export CSV</button>
           <button class="btn btn-p btn-sm" onclick="show('manual-lead',document.querySelector('.ni[onclick*=manual-lead]'))">+ Add Lead</button>
         </div>

@@ -247,6 +247,7 @@ async function bootAppData() {
     wireNotificationRulesForm();
     wireUserManagement();
     wireExportCsv();
+    wireImportCsv();
     wireOnboardingChecklist();
     wireTopBarButtons();
     wireDealEditButton();
@@ -2193,6 +2194,78 @@ function wireExportCsv() {
     const totalCount = (window.__crmState.deals || []).length;
     toast(`Exported ${deals.length} of ${totalCount} lead${totalCount === 1 ? '' : 's'} (filtered view)`, 'ok');
   };
+}
+
+// ─── CSV Import (Leads) ─────────────────────────────────────────────────────
+function wireImportCsv() {
+  // Template download
+  const templateBtn = document.getElementById('leads-import-template-btn');
+  if (templateBtn && !templateBtn.dataset.wired) {
+    templateBtn.dataset.wired = '1';
+    templateBtn.addEventListener('click', async () => {
+      try {
+        const token = await getIdToken();
+        const res = await fetch('/api/leads/import-template', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'eshipperplus-leads-import-template.csv';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        toast('Template downloaded — fill it in and use Import CSV', 'ok');
+      } catch (err) { toast('Template download failed: ' + err.message, 'error'); }
+    });
+  }
+
+  // Import button → opens file picker
+  const importBtn = document.getElementById('leads-import-csv-btn');
+  const fileInput = document.getElementById('leads-import-file');
+  if (importBtn && fileInput && !importBtn.dataset.wired) {
+    importBtn.dataset.wired = '1';
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      if (!fileInput.files?.length) return;
+      const file = fileInput.files[0];
+      if (!confirm(`Import leads from "${file.name}"?\n\nEach row will become a new deal at New stage. Duplicates are flagged automatically.`)) {
+        fileInput.value = '';
+        return;
+      }
+      const fd = new FormData();
+      fd.append('file', file);
+      importBtn.disabled = true;
+      importBtn.textContent = '⏳ Importing...';
+      try {
+        const token = await getIdToken();
+        const res = await fetch('/api/leads/import', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Import failed');
+
+        if (result.failed > 0) {
+          const sample = result.errors.slice(0, 5).map(e => `  Row ${e.row}: ${e.error}`).join('\n');
+          const more = result.errors.length > 5 ? `\n  …and ${result.errors.length - 5} more` : '';
+          toast(`Imported ${result.created} · ${result.failed} failed`, 'warn');
+          alert(`Imported ${result.created} of ${result.created + result.failed} rows.\n\nFailures:\n${sample}${more}`);
+        } else {
+          toast(`✓ Imported ${result.created} lead${result.created === 1 ? '' : 's'}`, 'ok');
+        }
+        await refreshAll();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        importBtn.disabled = false;
+        importBtn.textContent = '⬆ Import CSV';
+        fileInput.value = '';
+      }
+    });
+  }
 }
 
 // ─── Onboarding checklist toggles (admin / onboarding role) ─────────────────

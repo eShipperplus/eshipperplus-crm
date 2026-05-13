@@ -857,6 +857,133 @@ describe('Users & invites', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CSV Import (Leads)
+// ═══════════════════════════════════════════════════════════════════════════
+describe('CSV lead import', () => {
+  test('rejects unauthenticated', async () => {
+    const res = await request(app)
+      .post('/api/leads/import')
+      .attach('file', Buffer.from('Company Name,Contact Email\nAcme,a@a.com\n'), 'leads.csv');
+    expect(res.status).toBe(401);
+  });
+
+  test('rejects onboarding role', async () => {
+    const headers = asUser('u1', 'onboarding');
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from('Company Name,Contact Email\nAcme,a@a.com\n'), 'leads.csv');
+    expect(res.status).toBe(403);
+  });
+
+  test('400 when no file', async () => {
+    const headers = asUser('u1', 'rep');
+    const res = await request(app).post('/api/leads/import').set(headers);
+    expect(res.status).toBe(400);
+  });
+
+  test('imports a valid CSV with one row', async () => {
+    const headers = asUser('u1', 'rep');
+    const csv = 'Company Name,Contact Email,Contact Name\nAcme Inc,a@a.com,Jane Doe\n';
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(200);
+    expect(res.body.created).toBe(1);
+    expect(res.body.failed).toBe(0);
+    expect(res.body.dealIds).toHaveLength(1);
+  });
+
+  test('reports per-row errors for missing required fields', async () => {
+    const headers = asUser('u1', 'rep');
+    const csv = 'Company Name,Contact Email\nAcme Inc,a@a.com\n,b@b.com\nNoEmail Co,\n';
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(200);
+    expect(res.body.created).toBe(1);
+    expect(res.body.failed).toBe(2);
+    expect(res.body.errors).toHaveLength(2);
+    expect(res.body.errors[0].row).toBe(3);
+    expect(res.body.errors[1].row).toBe(4);
+  });
+
+  test('parses per-service columns into the services array', async () => {
+    const headers = asUser('u1', 'rep');
+    const csv = [
+      'Company Name,Contact Email,Freight $,Freight Model,Freight Volume,Warehousing & Fulfillment $,Warehousing & Fulfillment Model',
+      'Acme,a@a.com,5000,one_time,3 trucks,30000,monthly',
+    ].join('\n');
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(200);
+    expect(res.body.created).toBe(1);
+    const dealId = res.body.dealIds[0];
+    const deal = mockStore.collections.crm_deals[dealId];
+    expect(deal.services).toHaveLength(2);
+    const freight = deal.services.find(s => s.name === 'Freight');
+    expect(freight.monthlyRevenue).toBe(5000);
+    expect(freight.revenueModel).toBe('one_time');
+    expect(freight.volume).toBe('3 trucks');
+    const warehousing = deal.services.find(s => s.name === 'Warehousing & Fulfillment');
+    expect(warehousing.monthlyRevenue).toBe(30000);
+    expect(warehousing.revenueModel).toBe('monthly');
+  });
+
+  test('rejects invalid stage', async () => {
+    const headers = asUser('u1', 'rep');
+    const csv = 'Company Name,Contact Email,Stage\nAcme,a@a.com,NotAStage\n';
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(200);
+    expect(res.body.failed).toBe(1);
+    expect(res.body.errors[0].error).toMatch(/Invalid stage/);
+  });
+
+  test('resolves owner by email when provided', async () => {
+    const headers = asUser('admin1', 'admin');
+    mockStore.collections.crm_users.sara = {
+      uid: 'sara', email: 'sara@eshipperplus.com', displayName: 'Sara K.', role: 'rep',
+    };
+    const csv = 'Company Name,Contact Email,Owner Email\nAcme,a@a.com,sara@eshipperplus.com\n';
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(200);
+    expect(res.body.created).toBe(1);
+    const dealId = res.body.dealIds[0];
+    expect(mockStore.collections.crm_deals[dealId].ownerUid).toBe('sara');
+  });
+
+  test('400 on empty CSV', async () => {
+    const headers = asUser('u1', 'rep');
+    const csv = 'Company Name,Contact Email\n';
+    const res = await request(app)
+      .post('/api/leads/import')
+      .set(headers)
+      .attach('file', Buffer.from(csv), 'leads.csv');
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /api/leads/import-template returns a CSV', async () => {
+    const headers = asUser('u1', 'rep');
+    const res = await request(app).get('/api/leads/import-template').set(headers);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/csv/);
+    expect(res.text).toContain('Company Name');
+    expect(res.text).toContain('Contact Email');
+    expect(res.text).toContain('Freight $');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Cron + webhooks
 // ═══════════════════════════════════════════════════════════════════════════
 describe('Cron + webhooks', () => {

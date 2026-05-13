@@ -601,6 +601,172 @@ app.put('/api/settings/:key', requireAuth, requireRole('admin'), async (req, res
   res.json({ ok: true });
 });
 
+// ─── Bulk CSV import for leads/deals (admin + rep) ─────────────────────────
+// Accepts a CSV file with one row per deal. Header row required.
+// Supports all the fields visible on the Leads/Deal Detail UI. Each row goes
+// through onLeadSubmit so the same rules fire as for any other intake channel.
+app.post('/api/leads/import',
+  requireAuth, requireRole('admin', 'rep'), upload.single('file'),
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    let rows;
+    try {
+      const ext = (req.file.originalname.split('.').pop() || '').toLowerCase();
+      if (ext === 'csv') {
+        rows = csvParse(req.file.buffer.toString('utf8'), {
+          columns: true, skip_empty_lines: true, trim: true, bom: true,
+        });
+      } else {
+        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: `Couldn't parse the file: ${err.message}` });
+    }
+
+    if (!rows.length) return res.status(400).json({ error: 'File has no data rows' });
+
+    // Build email→uid map once so we can resolve owners
+    const usersSnap = await db.collection('crm_users').get();
+    const userByEmail = {};
+    const userByName = {};
+    usersSnap.docs.forEach(d => {
+      const u = d.data();
+      if (u.email) userByEmail[u.email.toLowerCase()] = u;
+      if (u.displayName) userByName[u.displayName.toLowerCase()] = u;
+    });
+
+    const SERVICE_NAMES = ['Freight', 'Small Parcel Shipping', 'Warehousing & Fulfillment', 'Cross-Docking', 'Value Added Services (VAS)'];
+    const norm = s => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+    // Flexible getter — looks up a column under several possible header names
+    const get = (row, ...keys) => {
+      const lookup = {};
+      Object.keys(row).forEach(k => { lookup[norm(k)] = row[k]; });
+      for (const key of keys) {
+        const v = lookup[norm(key)];
+        if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    };
+
+    const results = { created: 0, failed: 0, errors: [], dealIds: [] };
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // CSV row number including header
+      try {
+        const companyName = get(row, 'Company Name', 'Company', 'company_name');
+        const contactEmail = get(row, 'Contact Email', 'Email', 'contact_email');
+        if (!companyName) throw new Error('Company Name is required');
+        if (!contactEmail) throw new Error('Contact Email is required');
+
+        // Build services from per-service columns. Accepts:
+        //   "Freight $" or "Freight Revenue" or "Freight Monthly"
+        //   "Freight Model" or "Freight Type" (monthly | one_time)
+        //   "Freight Volume", "Freight Notes"
+        const services = [];
+        for (const svc of SERVICE_NAMES) {
+          const rev = Number(String(get(row,
+            `${svc} $`, `${svc} Revenue`, `${svc} Monthly`, `${svc} Amount`, svc) || '').replace(/[^\d.]/g, ''));
+          const volume = get(row, `${svc} Volume`);
+          const comments = get(row, `${svc} Notes`, `${svc} Comments`);
+          if (rev > 0 || volume || comments) {
+            let model = (get(row, `${svc} Model`, `${svc} Type`) || 'monthly').toLowerCase().replace(/\s|-/g, '_');
+            if (model === 'one_time' || model === 'onetime' || model === 'oneoff') model = 'one_time';
+            else model = 'monthly';
+            const s = {
+              name: svc,
+              monthlyRevenue: rev || 0,
+              revenueModel: model,
+            };
+            if (volume) s.volume = volume.slice(0, 200);
+            if (comments) s.comments = comments.slice(0, 500);
+            services.push(s);
+          }
+        }
+
+        // Owner resolution — by email first, fall back to display name
+        const ownerEmailRaw = get(row, 'Owner Email', 'Owner email', 'Assigned Rep Email');
+        const ownerNameRaw = get(row, 'Owner', 'Owner Name', 'Assigned Rep');
+        let owner = null;
+        if (ownerEmailRaw) owner = userByEmail[ownerEmailRaw.toLowerCase()];
+        if (!owner && ownerNameRaw) owner = userByName[ownerNameRaw.toLowerCase()];
+
+        // Warehouse Locations — semicolon, pipe, or comma separated
+        const whRaw = get(row, 'Warehouse Locations', 'Warehouses', 'Warehouse');
+        const warehouseLocations = whRaw
+          ? whRaw.split(/[;|,]/).map(s => s.trim()).filter(Boolean).slice(0, 10)
+          : [];
+
+        const stage = get(row, 'Stage') || 'New';
+        if (!STAGES.includes(stage)) throw new Error(`Invalid stage "${stage}" — must be one of: ${STAGES.join(', ')}`);
+
+        const payload = {
+          companyName: companyName.slice(0, 200),
+          contactName: get(row, 'Contact Name', 'Contact').slice(0, 200),
+          contactEmail: contactEmail.slice(0, 200),
+          contactPhone: get(row, 'Contact Phone', 'Phone').slice(0, 40),
+          industry: get(row, 'Industry').slice(0, 60),
+          source: get(row, 'Source', 'Lead Source') || 'Manual Entry',
+          stage,
+          notes: get(row, 'Notes', 'Note', 'Notes / Context').slice(0, 2000),
+          services,
+          warehouseLocations,
+          ownerUid: owner?.uid || req.uid,        // default to the importer
+          ownerName: owner?.displayName || req.user.displayName,
+          createdBy: req.uid,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          lastActivityAt: Timestamp.now(),
+        };
+
+        const docRef = await db.collection('crm_deals').add(payload);
+        results.dealIds.push(docRef.id);
+        // Fire R-01..R-06 (tier auto-classify, admin notify, duplicate check, etc.)
+        rules.onLeadSubmit(db, docRef.id).catch(err => {
+          console.error(`onLeadSubmit failed for imported row ${rowNum}:`, err);
+        });
+        results.created++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push({ row: rowNum, error: err.message });
+      }
+    }
+
+    res.json(results);
+  });
+
+// Download a CSV template so admins know which columns the importer expects
+app.get('/api/leads/import-template', requireAuth, (req, res) => {
+  const headers = [
+    'Company Name', 'Contact Name', 'Contact Email', 'Contact Phone',
+    'Industry', 'Source', 'Stage', 'Owner Email', 'Owner', 'Notes',
+    'Warehouse Locations',
+    // Per-service columns ($ = monthly amount in dollars, Model = monthly | one_time)
+    'Freight $', 'Freight Model', 'Freight Volume', 'Freight Notes',
+    'Small Parcel Shipping $', 'Small Parcel Shipping Model', 'Small Parcel Shipping Volume', 'Small Parcel Shipping Notes',
+    'Warehousing & Fulfillment $', 'Warehousing & Fulfillment Model', 'Warehousing & Fulfillment Volume', 'Warehousing & Fulfillment Notes',
+    'Cross-Docking $', 'Cross-Docking Model', 'Cross-Docking Volume', 'Cross-Docking Notes',
+    'Value Added Services (VAS) $', 'Value Added Services (VAS) Model', 'Value Added Services (VAS) Volume', 'Value Added Services (VAS) Notes',
+  ];
+  const sampleRow = [
+    'Acme Logistics', 'Mike Tremblay', 'mike@acme.com', '(416) 555-0182',
+    'Food & Beverage', 'Partner Referral', 'New', 'kareena.gupta@eshipperplus.com', '', 'Met at supply chain conference',
+    'Ontario;Michigan',
+    '8000', 'one_time', '5 trucks/mo', 'Toronto → Chicago lanes',
+    '', '', '', '',
+    '30000', 'monthly', '20 pallets storage', '24/7 facility access required',
+    '', '', '', '',
+    '', '', '', '',
+  ];
+  const escape = v => /[,"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const csv = headers.map(escape).join(',') + '\n' + sampleRow.map(escape).join(',') + '\n';
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="eshipperplus-leads-import-template.csv"');
+  res.send(csv);
+});
+
 // Partner rep directory — CSV/Excel upload (admin only)
 app.post('/api/settings/partner-rep-directory/upload',
   requireAuth, requireRole('admin'), upload.single('file'),
