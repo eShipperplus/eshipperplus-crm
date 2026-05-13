@@ -362,8 +362,18 @@ async function onStageChange(db, { dealId, fromStage, toStage, actor, reason }) 
         detail: contract?.id ? `Doc ID: ${contract.id}` : 'Template not configured — skipped',
       });
     } catch (err) {
-      console.error('R-17 contract generation failed:', err);
-      await logActivity(db, dealId, { kind: 'contract_error', detail: err.message });
+      // Include the SA email in the error so admin can verify the right
+      // account has access to the configured Drive folder.
+      let saEmail = '(unknown SA)';
+      try {
+        const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+        if (sa.client_email) saEmail = sa.client_email;
+      } catch {}
+      console.error('R-17 contract generation failed:', err.message, 'as', saEmail);
+      await logActivity(db, dealId, {
+        kind: 'contract_error',
+        detail: `${err.message} (auth as ${saEmail})`,
+      });
     }
 
     const admins = await adminRecipients(db);

@@ -18,9 +18,15 @@
 const { google } = require('googleapis');
 
 function getAuthClient() {
-  return new google.auth.GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/drive'],
-  });
+  const SCOPES = ['https://www.googleapis.com/auth/drive'];
+  const saJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (saJson) {
+    try {
+      const credentials = JSON.parse(saJson);
+      return new google.auth.GoogleAuth({ credentials, scopes: SCOPES });
+    } catch (err) { /* fall through to ADC */ }
+  }
+  return new google.auth.GoogleAuth({ scopes: SCOPES });
 }
 
 async function sendForSignature({ docId, signerEmail, signerName, subject, message }) {

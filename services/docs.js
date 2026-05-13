@@ -11,13 +11,23 @@ const { google } = require('googleapis');
 
 const TEMPLATE_ID = process.env.CONTRACT_TEMPLATE_DOC_ID || '';
 
+// Same approach as services/drive.js — use the FIREBASE_SERVICE_ACCOUNT SA
+// so Drive/Docs share permission grants apply correctly.
 function getAuthClient() {
-  return new google.auth.GoogleAuth({
-    scopes: [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/documents',
-    ],
-  });
+  const SCOPES = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/documents',
+  ];
+  const saJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (saJson) {
+    try {
+      const credentials = JSON.parse(saJson);
+      return new google.auth.GoogleAuth({ credentials, scopes: SCOPES });
+    } catch (err) {
+      console.warn('[docs] FIREBASE_SERVICE_ACCOUNT not parseable, falling back to ADC');
+    }
+  }
+  return new google.auth.GoogleAuth({ scopes: SCOPES });
 }
 
 async function getClients() {
